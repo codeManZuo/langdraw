@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线绘图工具</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- CodeMirror 编辑器 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/theme/dracula.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/mode/javascript/javascript.min.js"></script>
+    <!-- 添加更多的语法模式 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/mode/clike/clike.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/addon/mode/simple.min.js"></script>
+    <!-- Mermaid 图表库 -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@9.3.0/dist/mermaid.min.js"></script>
+    <!-- PlantUML 编码器 -->
+    <script src="https://cdn.jsdelivr.net/npm/plantuml-encoder@1.4.0/dist/plantuml-encoder.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- 顶部工具栏 -->
+        <header class="toolbar">
+            <div class="logo">在线绘图工具</div>
+            <div class="tools">
+                <div class="diagram-type">
+                    <label for="diagram-select">图表类型:</label>
+                    <select id="diagram-select">
+                        <option value="mermaid">Mermaid</option>
+                        <option value="plantuml">PlantUML</option>
+                        <option value="seqdiag">SeqDiag</option>
+                        <option value="bpmn">BPMN</option>
+                        <option value="excalidraw">Excalidraw</option>
+                        <option value="bytefield">Bytefield</option>
+                        <option value="nomnoml">Nomnoml</option>
+                        <option value="actdiag">ActDiag</option>
+                        <option value="erd">Erd</option>
+                        <option value="ditaa">Ditaa</option>
+                    </select>
+                </div>
+                <div class="template-selector">
+                    <label for="template-select">模板:</label>
+                    <select id="template-select">
+                        <option value="">选择模板...</option>
+                        <!-- 模板选项将通过JS动态添加 -->
+                    </select>
+                </div>
+                <div class="use-kroki">
+                    <input type="checkbox" id="use-kroki" />
+                    <label for="use-kroki">使用Kroki渲染</label>
+                </div>
+            </div>
+        </header>
+        
+        <!-- 主要内容区域 -->
+        <main class="content">
+            <!-- 左侧预览区域 -->
+            <div class="preview-panel">
+                <div class="panel-header">预览</div>
+                <div class="preview-container" id="preview-container">
+                    <!-- 图表将在这里渲染 -->
+                </div>
+            </div>
+            
+            <!-- 右侧编辑区域 -->
+            <div class="editor-panel">
+                <div class="panel-header">编辑器</div>
+                <div class="editor-container">
+                    <textarea id="code-editor"></textarea>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="js/config.js"></script>
+    <script src="js/templates.js"></script>
+    <script src="js/renderers.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html> 
