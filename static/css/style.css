@@ -5,7 +5,7 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: Arial, sans-serif;
     background-color: #f5f5f5;
     color: #333;
     line-height: 1.6;
@@ -23,42 +23,126 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: #2c3e50;
-    color: white;
-    padding: 0.8rem 1.5rem;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    padding: 10px 20px;
+    background-color: #f5f5f5;
+    border-bottom: 1px solid #ddd;
 }
 
 .logo {
-    font-size: 1.5rem;
+    font-size: 24px;
     font-weight: bold;
 }
 
 .tools {
     display: flex;
-    gap: 1.5rem;
+    gap: 20px;
     align-items: center;
 }
 
-.diagram-type, .template-selector {
+/* 设置按钮样式 */
+.settings-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+.settings-icon:hover {
+    background-color: #e0e0e0;
+}
+
+.settings-icon i {
+    font-size: 20px;
+    color: #666;
+}
+
+/* 模态框样式 */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border-radius: 8px;
+    width: 400px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.modal-header {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 0.5rem;
+    margin-bottom: 20px;
 }
 
-select {
-    padding: 0.5rem;
+.modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.close {
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+}
+
+.close:hover {
+    color: #000;
+}
+
+.modal-body {
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.form-group input[type="password"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.modal-footer button {
+    padding: 8px 16px;
     border: none;
     border-radius: 4px;
-    background-color: #34495e;
-    color: white;
-    font-size: 0.9rem;
     cursor: pointer;
 }
 
-select:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.5);
+#save-settings {
+    background-color: #4CAF50;
+    color: white;
+}
+
+#cancel-settings {
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
 }
 
 /* 内容区域样式 */
@@ -68,42 +152,25 @@ select:focus {
     overflow: hidden;
 }
 
-.preview-panel, .editor-panel {
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    overflow: hidden;
-}
-
-.preview-panel {
-    flex: 1;
-    background-color: white;
-    border-right: 1px solid #ddd;
-}
-
+.preview-panel,
 .editor-panel {
     flex: 1;
-    background-color: #f9f9f9;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
 }
 
 .panel-header {
-    padding: 0.8rem 1rem;
-    background-color: #ecf0f1;
+    padding: 10px;
+    background-color: #f5f5f5;
     border-bottom: 1px solid #ddd;
-    font-weight: bold;
-    font-size: 0.9rem;
-    color: #2c3e50;
 }
 
 .preview-container {
     flex: 1;
-    padding: 1.5rem;
     overflow: auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    padding: 20px;
     position: relative;
-    min-height: 500px;
 }
 
 .editor-container {
@@ -113,17 +180,8 @@ select:focus {
 
 /* CodeMirror 编辑器样式覆盖 */
 .CodeMirror {
-    height: 100%;
-    font-family: 'Cascadia Code', 'Consolas', monospace;
-    font-size: 14px;
-    line-height: 1.5;
-}
-
-/* Mermaid 图表样式调整 */
-.mermaid {
-    width: 100%;
-    max-width: 800px;
-    margin: 0 auto;
+    height: 100% !important;
+    font-family: 'Consolas', monospace;
 }
 
 /* 响应式调整 */
@@ -303,4 +361,5 @@ select:focus {
     background-color: #f9f9f9;
     border-radius: 4px;
     margin: 1rem 0;
+} 
 } 
