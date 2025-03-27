@@ -1,4 +1,4 @@
-from flask import Flask, send_from_directory, request, jsonify
+from flask import Flask, send_from_directory, request, jsonify, Response, stream_with_context
 from openai import OpenAI
 import os
 import traceback
@@ -19,7 +19,7 @@ def serve_static(path):
 
 @app.route('/api/nl-draw', methods=['POST'])
 def natural_language_draw():
-    """处理自然语言绘图请求"""
+    """处理自然语言绘图请求（流式响应）"""
     try:
         data = request.json
         api_key = data.get('api_key')
@@ -44,49 +44,76 @@ def natural_language_draw():
 
         print(f"发送到OpenRouter的提示词: {prompt}")
 
-        try:
-            # 调用OpenRouter API
-            client = OpenAI(
-                base_url="https://openrouter.ai/api/v1",
-                api_key=api_key
-            )
+        def generate():
+            try:
+                # 调用OpenRouter API
+                client = OpenAI(
+                    base_url="https://openrouter.ai/api/v1",
+                    api_key=api_key
+                )
 
-            completion = client.chat.completions.create(
-                model="deepseek/deepseek-chat-v3-0324:free",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ]
-            )
+                # 使用流式响应
+                completion = client.chat.completions.create(
+                    model="deepseek/deepseek-chat-v3-0324:free",
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    stream=True  # 启用流式响应
+                )
 
-            if not completion or not completion.choices:
-                raise ValueError("OpenRouter API 返回结果为空")
+                # 用于累积完整的响应
+                full_response = ""
+                
+                # 处理流式响应
+                for chunk in completion:
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        content = chunk.choices[0].delta.content
+                        full_response += content
+                        
+                        # 打印流式数据
+                        print(f"流式数据片段: {content}")
+                        # print(f"当前累积响应: {full_response}")
+                        
+                        # 发送当前累积的响应
+                        yield json.dumps({
+                            'code': full_response,
+                            'done': False
+                        }) + '\n'
 
-            # 获取生成的图表代码
-            generated_code = completion.choices[0].message.content
-            print(f"成功生成图表代码，长度: {len(generated_code)}")
+                # 处理最终的完整响应
+                final_response = full_response.strip()
+                print(f"\n完整响应处理前: {final_response}")
+                
+                # 处理代码块标记
+                if final_response.startswith('```') and final_response.endswith('```'):
+                    # 移除开头的 ``` 和可能的语言标识
+                    final_response = re.sub(r'^```[\w-]*\n', '', final_response)
+                    # 移除结尾的 ```
+                    final_response = re.sub(r'\n```$', '', final_response)
+                
+                # 如果只有单行代码，直接移除 ``` 标记
+                final_response = final_response.strip('`')
+                
+                print(f"完整响应处理后: {final_response}\n")
 
-            # 处理代码块标记
-            # 1. 移除开头和结尾的 ```
-            generated_code = generated_code.strip()
-            if generated_code.startswith('```') and generated_code.endswith('```'):
-                # 移除开头的 ``` 和可能的语言标识
-                generated_code = re.sub(r'^```[\w-]*\n', '', generated_code)
-                # 移除结尾的 ```
-                generated_code = re.sub(r'\n```$', '', generated_code)
-            
-            # 2. 如果只有单行代码，直接移除 ``` 标记
-            generated_code = generated_code.strip('`')
+                # 发送完整的最终响应
+                yield json.dumps({
+                    'code': final_response,
+                    'done': True
+                })
 
-            print(f"处理后的代码，长度: {len(generated_code)}")
-            return jsonify({'code': generated_code})
+            except Exception as api_error:
+                print(f"OpenRouter API 调用错误: {str(api_error)}")
+                print(f"详细错误信息: {traceback.format_exc()}")
+                yield json.dumps({
+                    'error': f'OpenRouter API 调用失败: {str(api_error)}',
+                    'done': True
+                })
 
-        except Exception as api_error:
-            print(f"OpenRouter API 调用错误: {str(api_error)}")
-            print(f"详细错误信息: {traceback.format_exc()}")
-            return jsonify({'error': f'OpenRouter API 调用失败: {str(api_error)}'}), 500
+        return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
     except Exception as e:
         print(f"处理请求时发生错误: {str(e)}")

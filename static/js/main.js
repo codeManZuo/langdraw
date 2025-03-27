@@ -6,10 +6,13 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentDiagramType = 'mermaid';  // 默认使用Mermaid
     let editor;                          // CodeMirror编辑器实例
     let renderTimeout = null;            // 渲染延时器
+    let streamRenderInterval = null;     // 流式渲染定时器
     let settings = {                     // 设置对象
         openrouterKey: localStorage.getItem('openrouterKey') || '',
         enableNLDrawing: localStorage.getItem('enableNLDrawing') === 'true'
     };
+    let isProcessingNLDrawing = false;  // 添加标志变量
+    let lastGeneratedCode = null;       // 存储最后一次生成的代码
     
     // 初始化自定义编辑器模式
     initCustomModes();
@@ -170,6 +173,34 @@ document.addEventListener('DOMContentLoaded', function() {
             // 重新渲染当前图表
             renderDiagram();
         });
+
+        // 监听重新生成按钮点击
+        document.getElementById('regenerate-btn').addEventListener('click', async function() {
+            if (settings.enableNLDrawing && settings.openrouterKey) {
+                const code = editor.getValue();
+                const previewContainer = document.getElementById('preview-container');
+                
+                try {
+                    // 设置处理标志
+                    isProcessingNLDrawing = true;
+                    // 使用自然语言处理
+                    const generatedCode = await handleNaturalLanguageDrawing(code);
+                    if (generatedCode) {
+                        lastGeneratedCode = generatedCode;
+                        // 更新编辑器内容
+                        editor.setValue(generatedCode);
+                        // 渲染生成的代码
+                        DiagramRenderers.render(generatedCode, currentDiagramType, previewContainer);
+                    }
+                } catch (error) {
+                    console.error('重新生成错误:', error);
+                    DiagramRenderers.showError(`重新生成失败: ${error.message}`, previewContainer);
+                } finally {
+                    // 重置处理标志
+                    isProcessingNLDrawing = false;
+                }
+            }
+        });
     }
     
     /**
@@ -249,6 +280,12 @@ document.addEventListener('DOMContentLoaded', function() {
     async function handleNaturalLanguageDrawing(text) {
         try {
             const currentTemplate = document.getElementById('template-select').value;
+            const regenerateBtn = document.getElementById('regenerate-btn');
+            const previewContainer = document.getElementById('preview-container');
+
+            // 添加加载动画
+            regenerateBtn.classList.add('loading');
+
             const response = await fetch('/api/nl-draw', {
                 method: 'POST',
                 headers: {
@@ -258,7 +295,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     api_key: settings.openrouterKey,
                     user_context: text,
                     draw_tool_name: currentDiagramType,
-                    draw_type: currentTemplate || '流程图' // 如果没有选择模板，默认使用流程图
+                    draw_type: currentTemplate || '流程图'
                 })
             });
 
@@ -266,18 +303,72 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error('API请求失败');
             }
 
-            const data = await response.json();
-            if (data.error) {
-                throw new Error(data.error);
+            // 创建响应流读取器
+            const reader = response.body.getReader();
+            let accumulatedCode = '';
+            
+            // 清除之前的定时器
+            if (streamRenderInterval) {
+                clearInterval(streamRenderInterval);
             }
 
-            return data.code;
+            // 设置定时渲染
+            streamRenderInterval = setInterval(() => {
+                if (accumulatedCode) {
+                    editor.setValue(accumulatedCode);
+                    DiagramRenderers.render(accumulatedCode, currentDiagramType, previewContainer);
+                }
+            }, 5000);
+
+            // 读取流数据
+            while (true) {
+                const {value, done} = await reader.read();
+                if (done) break;
+
+                // 将 Uint8Array 转换为文本
+                const chunk = new TextDecoder().decode(value);
+                // 处理每一行数据
+                const lines = chunk.split('\n').filter(line => line.trim());
+                
+                for (const line of lines) {
+                    try {
+                        const data = JSON.parse(line);
+                        
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+
+                        accumulatedCode = data.code;
+                        
+                        // 如果是最终响应
+                        if (data.done) {
+                            // 清除定时渲染
+                            clearInterval(streamRenderInterval);
+                            // 最后一次完整渲染
+                            editor.setValue(accumulatedCode);
+                            DiagramRenderers.render(accumulatedCode, currentDiagramType, previewContainer);
+                            lastGeneratedCode = accumulatedCode;
+                        }
+                    } catch (error) {
+                        console.error('解析响应数据错误:', error);
+                    }
+                }
+            }
+
+            return lastGeneratedCode;
         } catch (error) {
             console.error('自然语言绘图错误:', error);
             // 显示错误信息
             const previewContainer = document.getElementById('preview-container');
             DiagramRenderers.showError(`自然语言绘图失败: ${error.message}`, previewContainer);
             return null;
+        } finally {
+            // 清除定时渲染
+            if (streamRenderInterval) {
+                clearInterval(streamRenderInterval);
+            }
+            // 移除加载动画
+            document.getElementById('regenerate-btn').classList.remove('loading');
         }
     }
 
@@ -297,13 +388,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             try {
                 if (settings.enableNLDrawing && settings.openrouterKey) {
-                    // 使用自然语言处理
-                    const generatedCode = await handleNaturalLanguageDrawing(code);
-                    if (generatedCode) {
-                        // 更新编辑器内容（但不触发change事件）
-                        editor.setValue(generatedCode);
-                        // 渲染生成的代码
-                        DiagramRenderers.render(generatedCode, currentDiagramType, previewContainer);
+                    // 如果启用了自然语言绘图，只渲染已生成的代码或原始代码
+                    if (lastGeneratedCode) {
+                        DiagramRenderers.render(lastGeneratedCode, currentDiagramType, previewContainer);
+                    } else {
+                        DiagramRenderers.render(code, currentDiagramType, previewContainer);
                     }
                 } else {
                     // 使用普通渲染
@@ -315,4 +404,20 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }, 500); // 500ms的防抖延迟
     }
+
+    // 在图表类型或模板改变时重置lastGeneratedCode
+    document.getElementById('diagram-select').addEventListener('change', function() {
+        lastGeneratedCode = null;
+    });
+
+    document.getElementById('template-select').addEventListener('change', function() {
+        lastGeneratedCode = null;
+    });
+
+    // 在禁用自然语言绘图时重置lastGeneratedCode
+    document.getElementById('enable-nl-drawing').addEventListener('change', function() {
+        if (!this.checked) {
+            lastGeneratedCode = null;
+        }
+    });
 }); 
