@@ -1172,3 +1172,193 @@ function setupNLDrawingListeners() {
 2. 视觉反馈应足够明显但不影响内容阅读
 3. 确保用户可以在只读模式下选择和复制内容
 4. 测试模式切换时提示和样式的同步变化
+
+### 8. 编辑器 Tab 页布局优化
+
+#### 8.1 需求描述
+- **问题背景**：原有的编辑器切换方式通过单个按钮实现，存在用户体验问题
+- **目标**：将编辑器切换改为更直观的 Tab 页形式，提高用户体验
+- **具体需求**：
+  1. UI 改进：
+     - 将编辑器区域改为 Tab 页布局
+     - 同时展示"图表编辑器"和"自然语言编辑器"两个选项卡
+     - 用户可通过点击选项卡切换不同编辑器
+  2. 功能保持：
+     - 保持所有现有功能不变
+     - 确保自然语言绘图模式下的编辑器锁定功能正常工作
+     - 维持编辑器标题和图标的区分
+  3. 兼容处理：
+     - 保持向后兼容性，确保现有代码能正常工作
+     - 确保在自然语言绘图模式切换时自动选中正确的 Tab
+
+#### 8.2 验收标准
+1. UI 要求：
+   - 编辑器区域顶部显示两个选项卡，分别标记为"图表编辑器"和"自然语言编辑器"
+   - 当前激活的选项卡有明确的视觉区分
+   - 选项卡切换时有平滑的视觉反馈
+2. 功能要求：
+   - 点击选项卡可以切换对应的编辑器
+   - 启用自然语言绘图时，自动选中自然语言编辑器选项卡
+   - 选项卡切换不影响编辑器内容
+3. 兼容性要求：
+   - 现有功能正常工作，不受 Tab 页改动影响
+   - 原有 API 和功能调用方式保持兼容
+
+#### 8.3 实现方案
+```html
+<!-- 编辑器面板结构 -->
+<div class="editor-panel">
+    <div class="panel-header">
+        <span class="diagram-editor">图表编辑器</span>
+    </div>
+    <div class="editor-tabs">
+        <div class="tab active" data-target="diagram-editor-container">图表编辑器</div>
+        <div class="tab" data-target="nl-editor-container">自然语言编辑器</div>
+    </div>
+    <div class="editor-containers">
+        <div id="diagram-editor-container" class="editor-container active">
+            <textarea id="code-editor"></textarea>
+        </div>
+        <div id="nl-editor-container" class="editor-container">
+            <textarea id="nl-editor"></textarea>
+        </div>
+    </div>
+</div>
+```
+
+```css
+/* 编辑器 tabs 样式 */
+.editor-tabs {
+    display: flex;
+    border-bottom: 1px solid #ddd;
+    background-color: #f5f5f5;
+}
+
+.editor-tabs .tab {
+    padding: 8px 15px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-bottom: none;
+    margin-right: 2px;
+    border-radius: 4px 4px 0 0;
+    transition: all 0.2s ease;
+}
+
+.editor-tabs .tab:hover {
+    background-color: #e9e9e9;
+}
+
+.editor-tabs .tab.active {
+    background-color: #fff;
+    border-color: #ddd;
+    color: #333;
+    font-weight: bold;
+    position: relative;
+}
+
+.editor-tabs .tab.active:after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: #fff;
+}
+
+.editor-container {
+    display: none;
+    height: calc(100% - 40px);
+}
+
+.editor-container.active {
+    display: block;
+}
+```
+
+```javascript
+/**
+ * 设置tab切换功能
+ */
+function setupTabSwitching() {
+    const tabs = document.querySelectorAll('.editor-tabs .tab');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            // 移除所有tab的激活状态
+            tabs.forEach(t => t.classList.remove('active'));
+            
+            // 获取目标容器id
+            const targetId = this.getAttribute('data-target');
+            
+            // 激活当前点击的tab
+            this.classList.add('active');
+            
+            // 隐藏所有编辑器容器
+            document.querySelectorAll('.editor-container').forEach(container => {
+                container.classList.remove('active');
+            });
+            
+            // 显示目标编辑器容器
+            document.getElementById(targetId).classList.add('active');
+            
+            // 更新当前编辑器类型
+            currentEditor = targetId === 'diagram-editor-container' ? 'diagram' : 'nl';
+            
+            // 更新编辑器面板标题
+            updateEditorTitle();
+            
+            // 刷新编辑器以确保正确显示
+            if (currentEditor === 'diagram') {
+                diagramEditor.refresh();
+            } else {
+                nlEditor.refresh();
+            }
+        });
+    });
+}
+
+/**
+ * 切换到指定的编辑器
+ * @param {string} editorType - 编辑器类型: 'diagram' 或 'nl'
+ */
+function switchToEditor(editorType) {
+    const tab = document.querySelector(`.editor-tabs .tab[data-target="${editorType === 'diagram' ? 'diagram-editor-container' : 'nl-editor-container'}"]`);
+    if (tab) {
+        tab.click();
+    }
+}
+
+/**
+ * 切换编辑器（兼容旧代码，保持向后兼容）
+ */
+function toggleEditor() {
+    // 切换编辑器类型
+    const newEditorType = currentEditor === 'diagram' ? 'nl' : 'diagram';
+    
+    // 使用新的tab切换功能
+    switchToEditor(newEditorType);
+}
+```
+
+#### 8.4 关键设计说明
+1. **Tab 页设计**
+   - 使用简洁的 Tab 页布局，提供直观的切换体验
+   - 通过数据属性（data-target）关联 Tab 和对应的编辑器容器
+   - 使用 CSS 提供清晰的视觉区分和交互反馈
+
+2. **兼容处理**
+   - 保留原有的 `toggleEditor` 函数但重构其实现，确保兼容性
+   - 新增 `switchToEditor` 函数提供更灵活的编辑器切换能力
+   - 在适当时机自动切换编辑器，如启用自然语言绘图时
+
+3. **编辑器管理**
+   - 使用显示/隐藏方式管理编辑器，而非之前的 DOM 操作
+   - 在切换 Tab 时更新编辑器面板标题，保持视觉一致性
+   - 调用 `refresh` 方法确保编辑器正确渲染
+
+#### 8.5 注意事项
+1. 确保在自然语言绘图模式下，图表编辑器的锁定状态正确显示
+2. 测试不同状态下的编辑器切换，确保没有意外行为
+3. 验证所有现有功能在新 UI 下正常工作
+4. 检查编辑器内容保持一致，切换不会导致内容丢失

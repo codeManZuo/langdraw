@@ -114,6 +114,11 @@ button.icon-only {
     align-items: center;
 }
 
+/* 编辑器面板特殊处理 */
+.editor-panel .panel-header {
+    padding: 0;
+}
+
 /* 预览容器样式 */
 .preview-container {
     flex: 1;
@@ -126,6 +131,16 @@ button.icon-only {
     flex: 1;
     position: relative;
     overflow: hidden;
+    display: none;
+    height: 100%;
+}
+
+.editor-container.active {
+    display: block;
+}
+
+.editor-containers {
+    height: calc(100% - 40px);
 }
 
 /* CodeMirror 编辑器样式 */
@@ -288,7 +303,12 @@ input[type="checkbox"] {
 
 /* 加载动画 */
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .loading::after {
@@ -501,22 +521,6 @@ input[type="checkbox"] {
     animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-/* 面板标题样式增强 */
-.panel-header span {
-    font-size: 16px;
-    display: flex;
-    align-items: center;
-}
-
 /* 编辑器标识图标 */
 .panel-header span::before {
     margin-right: 8px;
@@ -526,13 +530,16 @@ input[type="checkbox"] {
 
 /* 图表编辑器标识 */
 .panel-header span.diagram-editor::before {
-    content: '\f1c9';  /* 代码文件图标 */
+    content: '\f542';  /* 流程图图标 */
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    margin-right: 8px;
     color: #4fc3f7;
 }
 
 /* 自然语言编辑器标识 */
 .panel-header span.nl-editor::before {
-    content: '\f27a';  /* 聊天气泡图标 */
+    content: '\f1ab';  /* 语言图标 */
     color: #81c784;
 }
 
@@ -594,4 +601,59 @@ input[type="checkbox"] {
 /* 只读模式下可以选择和复制内容 */
 .readonly .CodeMirror-selected {
     background-color: rgba(75, 135, 255, 0.3) !important;
+}
+
+/* 编辑器 tabs 样式 */
+.editor-tabs {
+    display: flex;
+    width: 100%;
+}
+
+.editor-tabs .tab {
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.editor-tabs .tab:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.editor-tabs .tab.active {
+    color: white;
+    position: relative;
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.editor-tabs .tab.active:after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: white;
+}
+
+/* 编辑器tab图标样式 */
+.editor-tabs .tab i {
+    margin-right: 5px;
+    font-size: 14px;
+}
+
+/* 图表编辑器图标颜色 */
+.editor-tabs .tab[data-target="diagram-editor-container"] i {
+    color: #4fc3f7;
+}
+
+/* 自然语言编辑器图标颜色 */
+.editor-tabs .tab[data-target="nl-editor-container"] i {
+    color: #81c784;
+}
+
+/* 确保编辑器填充整个容器空间 */
+.editor-container .CodeMirror {
+    height: 100%;
 } 

@@ -15,8 +15,8 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     let isProcessingNLDrawing = false;   // 添加标志变量
     let lastGeneratedCode = null;        // 存储最后一次生成的代码
-    let currentEditor = 'diagram';       // 当前显示的编辑器类型
-    let isInitialLoad = true;            // 标记初始加载状态
+    let currentEditor = 'diagram';       // 当前激活的编辑器类型: 'diagram' 或 'nl'
+    let isInitialLoad = true;            // 初始加载标志
     
     // 确保所有模态框初始时是隐藏的
     document.querySelectorAll('.modal').forEach(modal => {
@@ -75,19 +75,18 @@ document.addEventListener('DOMContentLoaded', function() {
         isInitialLoad = false;
     }, 1000);
 
+    // 初始化应用
+    init();
+
     /**
      * 初始化编辑器
      */
     function initEditors() {
-        // 获取编辑器元素
-        const diagramTextArea = document.getElementById('code-editor');
-        const nlTextArea = document.getElementById('nl-editor');
-        
-        // 创建绘图文本编辑器
-        diagramEditor = CodeMirror.fromTextArea(diagramTextArea, {
+        // 初始化代码编辑器
+        diagramEditor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
+            lineNumbers: true,
             mode: currentDiagramType,
             theme: 'dracula',
-            lineNumbers: true,
             lineWrapping: true,
             tabSize: 2,
             indentWithTabs: false,
@@ -95,11 +94,11 @@ document.addEventListener('DOMContentLoaded', function() {
             matchBrackets: true
         });
         
-        // 创建自然语言编辑器
-        nlEditor = CodeMirror.fromTextArea(nlTextArea, {
+        // 初始化自然语言编辑器
+        nlEditor = CodeMirror.fromTextArea(document.getElementById('nl-editor'), {
+            lineNumbers: true,
             mode: 'text',
             theme: 'dracula',
-            lineNumbers: true,
             lineWrapping: true,
             tabSize: 2,
             indentWithTabs: false
@@ -118,16 +117,85 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // 设置编辑器权限控制
-        setupEditorPermissions();
+        // 初始化编辑器内容 - 默认为空，后续会通过loadTemplate加载内容
+        // 不需要使用defaultDiagramCode变量
+        
+        // 为tab添加点击事件
+        setupTabSwitching();
     }
 
     /**
-     * 设置编辑器权限控制
+     * 设置tab切换功能
      */
-    function setupEditorPermissions() {
-        // 仅设置编辑器为只读，不再监听 beforeChange 事件
-        // 在 updateEditorsState 中已经添加了点击监听器
+    function setupTabSwitching() {
+        const tabs = document.querySelectorAll('.editor-tabs .tab');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                // 获取目标容器id
+                const targetId = this.getAttribute('data-target');
+                
+                // 更新当前编辑器类型
+                currentEditor = targetId === 'diagram-editor-container' ? 'diagram' : 'nl';
+                
+                // 隐藏所有编辑器容器
+                document.querySelectorAll('.editor-container').forEach(container => {
+                    container.classList.remove('active');
+                });
+                
+                // 显示目标编辑器容器
+                document.getElementById(targetId).classList.add('active');
+                
+                // 不需要手动更新tab状态，将由updateEditorTitle处理
+                updateEditorTitle();
+                
+                // 刷新编辑器以确保正确显示
+                if (currentEditor === 'diagram') {
+                    diagramEditor.refresh();
+                } else {
+                    nlEditor.refresh();
+                }
+            });
+        });
+    }
+
+    /**
+     * 更新编辑器标题
+     */
+    function updateEditorTitle() {
+        // 由于tabs现在直接在panel-header中，这里只需处理tab的活动状态
+        const diagramTab = document.querySelector('.editor-tabs .tab[data-target="diagram-editor-container"]');
+        const nlTab = document.querySelector('.editor-tabs .tab[data-target="nl-editor-container"]');
+        
+        if (currentEditor === 'diagram') {
+            diagramTab.classList.add('active');
+            nlTab.classList.remove('active');
+        } else {
+            diagramTab.classList.remove('active');
+            nlTab.classList.add('active');
+        }
+    }
+
+    /**
+     * 切换到指定的编辑器
+     * @param {string} editorType - 编辑器类型: 'diagram' 或 'nl'
+     */
+    function switchToEditor(editorType) {
+        const tab = document.querySelector(`.editor-tabs .tab[data-target="${editorType === 'diagram' ? 'diagram-editor-container' : 'nl-editor-container'}"]`);
+        if (tab) {
+            tab.click();
+        }
+    }
+
+    /**
+     * 切换编辑器（向后兼容）
+     */
+    function toggleEditor() {
+        // 切换编辑器类型
+        const newEditorType = currentEditor === 'diagram' ? 'nl' : 'diagram';
+        
+        // 使用新的tab切换功能
+        switchToEditor(newEditorType);
     }
 
     /**
@@ -180,6 +248,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // 显示提示信息
                 showToast('已启用自然语言绘图模式，图表编辑器已锁定', 3000);
+                
+                // 如果当前是图表编辑器，自动切换到自然语言编辑器
+                if (currentEditor === 'diagram') {
+                    switchToEditor('nl');
+                }
             } else {
                 // 关闭自然语言绘图时，重新启用自动渲染选项
                 document.getElementById('enable-auto-render').disabled = false;
@@ -191,11 +264,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // 显示提示信息
                 showToast('已退出自然语言绘图模式，图表编辑器已解锁', 3000);
-            }
-            
-            // 如果启用，自动切换到自然语言编辑器
-            if (isEnabled && currentEditor === 'diagram') {
-                toggleEditor();
             }
         });
     }
@@ -250,9 +318,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // 监听编辑器切换按钮
-        document.getElementById('editor-switch').addEventListener('click', toggleEditor);
-        
         // 监听保存按钮
         document.getElementById('save-btn').addEventListener('click', handleSave);
         
@@ -276,59 +341,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // 如果切换到Kroki渲染，需要手动触发一次渲染
             renderDiagram(true);
         });
-    }
-
-    /**
-     * 切换编辑器显示
-     */
-    function toggleEditor() {
-        // 检查是否启用了自然语言绘图但没有API密钥
-        if (currentEditor === 'diagram' && 
-            document.getElementById('enable-nl-drawing').checked && 
-            !settings.openrouterKey) {
-            
-            // 显示提示并阻止切换
-            showToast('请先设置API密钥才能使用自然语言编辑器');
-            
-            // 显示设置对话框
-            document.getElementById('settings-modal').classList.add('show');
-            return;
-        }
-        
-        const editorPanelHeader = document.querySelector('.editor-panel .panel-header');
-        
-        if (currentEditor === 'diagram') {
-            diagramEditor.getWrapperElement().style.display = 'none';
-            nlEditor.getWrapperElement().style.display = '';
-            currentEditor = 'nl';
-            
-            // 更新编辑器面板标题以显示当前是自然语言编辑器
-            editorPanelHeader.innerHTML = `
-                <span class="nl-editor">自然语言编辑器</span>
-                <button id="editor-switch" class="editor-switch" title="切换到图表编辑器">
-                    <i class="fas fa-exchange-alt"></i> 返回图表编辑
-                </button>
-            `;
-        } else {
-            diagramEditor.getWrapperElement().style.display = '';
-            nlEditor.getWrapperElement().style.display = 'none';
-            currentEditor = 'diagram';
-            
-            // 更新编辑器面板标题以显示当前是图表编辑器
-            editorPanelHeader.innerHTML = `
-                <span class="diagram-editor">图表编辑器</span>
-                <button id="editor-switch" class="editor-switch" title="切换到自然语言编辑器">
-                    <i class="fas fa-exchange-alt"></i> 切换到自然语言
-                </button>
-            `;
-        }
-        
-        // 重新绑定切换按钮事件
-        document.getElementById('editor-switch').addEventListener('click', toggleEditor);
-        
-        // 刷新编辑器以确保正确显示
-        diagramEditor.refresh();
-        nlEditor.refresh();
     }
 
     /**
@@ -357,6 +369,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 // 设置标记，避免重复添加事件监听器
                 diagramWrapper.setAttribute('data-has-click-listener', 'true');
+            }
+            
+            // 如果已启用自然语言绘图，默认显示自然语言编辑器
+            if (isInitialLoad) {
+                switchToEditor('nl');
             }
         } else {
             diagramWrapper.classList.remove('readonly');
@@ -467,16 +484,42 @@ document.addEventListener('DOMContentLoaded', function() {
             const useKroki = document.getElementById('use-kroki').checked;
             
             try {
-                if (useKroki || !config.localRenderSupport[currentDiagramType]) {
+                // 清空预览容器
+                previewContainer.innerHTML = '';
+                
+                if (useKroki) {
                     // 使用Kroki渲染
                     DiagramRenderers.renderWithKroki(code, currentDiagramType, previewContainer);
                 } else {
-                    // 使用本地渲染
-                    DiagramRenderers.render(code, currentDiagramType, previewContainer);
+                    // 本地渲染 - 根据图表类型处理
+                    switch (currentDiagramType) {
+                        case 'mermaid':
+                            // 使用Mermaid库渲染
+                            const mermaidContainer = document.createElement('div');
+                            mermaidContainer.className = 'mermaid';
+                            mermaidContainer.textContent = code;
+                            previewContainer.appendChild(mermaidContainer);
+                            
+                            // 触发Mermaid渲染
+                            mermaid.init(undefined, mermaidContainer);
+                            break;
+                            
+                        default:
+                            // 默认使用Kroki渲染
+                            DiagramRenderers.renderWithKroki(code, currentDiagramType, previewContainer);
+                            break;
+                    }
                 }
             } catch (error) {
                 console.error('渲染错误:', error);
-                DiagramRenderers.showError(`渲染失败: ${error.message}`, previewContainer);
+                // 显示错误消息
+                previewContainer.innerHTML = '';
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.style.color = 'red';
+                errorDiv.style.padding = '1rem';
+                errorDiv.textContent = `渲染失败: ${error.message}`;
+                previewContainer.appendChild(errorDiv);
             }
         }, 500);
     }
@@ -645,6 +688,29 @@ document.addEventListener('DOMContentLoaded', function() {
             openrouterKeyInput.value = settings.openrouterKey;
             enableNLDrawingCheckbox.checked = settings.enableNLDrawing;
             modal.classList.remove('show');
+        }
+    }
+
+    /**
+     * 初始化应用
+     */
+    function init() {
+        // 设置初始UI状态
+        document.getElementById('enable-nl-drawing').checked = settings.enableNLDrawing;
+        document.getElementById('enable-auto-render').checked = settings.autoRender;
+        updateEditorsState();
+        
+        // 初始化渲染
+        renderDiagram(true);
+        
+        // 延迟标记初始加载完成
+        setTimeout(() => {
+            isInitialLoad = false;
+        }, 500);
+        
+        // 如果是自然语言绘图模式，可能需要调整初始视图
+        if (settings.enableNLDrawing) {
+            switchToEditor('nl');
         }
     }
 }); 

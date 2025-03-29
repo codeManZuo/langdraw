@@ -87,14 +87,18 @@
             <!-- 右侧编辑区域 -->
             <div class="editor-panel">
                 <div class="panel-header">
-                    <span class="diagram-editor">图表编辑器</span>
-                    <button id="editor-switch" class="editor-switch" title="切换到自然语言编辑器">
-                        <i class="fas fa-exchange-alt"></i> 切换到自然语言
-                    </button>
+                    <div class="editor-tabs">
+                        <div class="tab active" data-target="diagram-editor-container"><i class="fas fa-code"></i> 图表编辑器</div>
+                        <div class="tab" data-target="nl-editor-container"><i class="fas fa-comment-dots"></i> 自然语言编辑器</div>
+                    </div>
                 </div>
-                <div class="editor-container">
-                    <textarea id="code-editor"></textarea>
-                    <textarea id="nl-editor" style="display: none;"></textarea>
+                <div class="editor-containers">
+                    <div id="diagram-editor-container" class="editor-container active">
+                        <textarea id="code-editor"></textarea>
+                    </div>
+                    <div id="nl-editor-container" class="editor-container">
+                        <textarea id="nl-editor"></textarea>
+                    </div>
                 </div>
             </div>
         </main>
