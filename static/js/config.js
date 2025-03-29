@@ -5,6 +5,32 @@ const config = {
     // 默认渲染服务URL
     krokiBaseUrl: 'https://kroki.io',
     
+    // 本地渲染支持配置
+    localRenderSupport: {
+        mermaid: true,
+        plantuml: false,
+        seqdiag: false,
+        bpmn: false,
+        excalidraw: false,
+        bytefield: false,
+        nomnoml: false,
+        actdiag: false,
+        erd: false,
+        ditaa: false
+    },
+    
+    // 编辑器配置
+    editor: {
+        switchIcon: 'fas fa-exchange-alt',
+        saveIcon: 'fas fa-save',
+        readOnlyMessage: {
+            title: '编辑器已锁定',
+            content: '当前处于自然语言绘图模式，绘图文本编辑器为只读状态。是否需要关闭自然语言绘图？',
+            confirmText: '确认关闭',
+            cancelText: '知道了'
+        }
+    },
+    
     // 图表类型配置
     diagramTypes: {
         mermaid: {

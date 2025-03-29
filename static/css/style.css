@@ -1,21 +1,27 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+/* 基础样式 */
+:root {
+    --primary-color: #4a90e2;
+    --secondary-color: #2c3e50;
+    --background-color: #f5f6fa;
+    --border-color: #dcdde1;
+    --text-color: #2f3640;
+    --success-color: #2ecc71;
+    --error-color: #e74c3c;
+    --warning-color: #f1c40f;
 }
 
 body {
-    font-family: Arial, sans-serif;
-    background-color: #f5f5f5;
-    color: #333;
-    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
 }
 
 .container {
     display: flex;
     flex-direction: column;
     height: 100vh;
-    overflow: hidden;
 }
 
 /* 工具栏样式 */
@@ -24,125 +30,58 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 10px 20px;
-    background-color: #f5f5f5;
-    border-bottom: 1px solid #ddd;
+    background-color: white;
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .logo {
     font-size: 24px;
     font-weight: bold;
+    color: var(--primary-color);
 }
 
 .tools {
     display: flex;
+    align-items: center;
     gap: 20px;
-    align-items: center;
 }
 
-/* 设置按钮样式 */
-.settings-icon {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 4px;
-    transition: background-color 0.3s;
-}
-
-.settings-icon:hover {
-    background-color: #e0e0e0;
-}
-
-.settings-icon i {
-    font-size: 20px;
-    color: #666;
-}
-
-/* 模态框样式 */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.5);
-}
-
-.modal-content {
-    background-color: #fefefe;
-    margin: 15% auto;
-    padding: 20px;
-    border-radius: 8px;
-    width: 400px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-
-.modal-header {
+.tools > div {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    gap: 8px;
 }
 
-.modal-header h2 {
-    margin: 0;
-    font-size: 20px;
-}
-
-.close {
-    font-size: 24px;
-    cursor: pointer;
-    color: #666;
-}
-
-.close:hover {
-    color: #000;
-}
-
-.modal-body {
-    margin-bottom: 20px;
-}
-
-.form-group {
-    margin-bottom: 15px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-}
-
-.form-group input[type="password"] {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
+/* 下拉菜单样式 */
+select {
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
-    box-sizing: border-box;
+    background-color: white;
+    font-size: 14px;
 }
 
-.modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-}
-
-.modal-footer button {
-    padding: 8px 16px;
+/* 按钮样式 */
+button {
+    padding: 6px 12px;
     border: none;
     border-radius: 4px;
-    cursor: pointer;
-}
-
-#save-settings {
-    background-color: #4CAF50;
+    background-color: var(--primary-color);
     color: white;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
-#cancel-settings {
-    background-color: #f5f5f5;
-    border: 1px solid #ddd;
+button:hover {
+    background-color: #357abd;
+}
+
+button.icon-only {
+    padding: 6px;
 }
 
 /* 内容区域样式 */
@@ -152,52 +91,220 @@ body {
     overflow: hidden;
 }
 
+/* 面板样式 */
 .preview-panel,
 .editor-panel {
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding: 10px;
+    border: 1px solid var(--border-color);
+    margin: 10px;
+    background-color: white;
+    border-radius: 6px;
+    overflow: hidden;
 }
 
 .panel-header {
     padding: 10px;
-    background-color: #f5f5f5;
-    border-bottom: 1px solid #ddd;
+    background-color: var(--secondary-color);
+    color: white;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
+/* 预览容器样式 */
 .preview-container {
     flex: 1;
-    overflow: auto;
     padding: 20px;
-    position: relative;
+    overflow: auto;
 }
 
+/* 编辑器容器样式 */
 .editor-container {
     flex: 1;
+    position: relative;
     overflow: hidden;
 }
 
-/* CodeMirror 编辑器样式覆盖 */
+/* CodeMirror 编辑器样式 */
 .CodeMirror {
     height: 100% !important;
-    font-family: 'Consolas', monospace;
+    font-family: "Fira Code", monospace;
+    font-size: 14px;
 }
 
-/* 响应式调整 */
+/* 只读编辑器样式 */
+.CodeMirror.readonly {
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+}
+
+.CodeMirror.readonly .CodeMirror-cursor {
+    display: none;
+}
+
+/* 编辑器切换按钮样式 */
+.editor-switch {
+    background-color: transparent;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+.editor-switch:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* 模态对话框样式 */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-width: 500px;
+    width: 90%;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.modal-header h2,
+.modal-content h3 {
+    margin: 0;
+    color: var(--secondary-color);
+}
+
+.modal-body {
+    margin-bottom: 20px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.close {
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-color);
+}
+
+/* 表单样式 */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--secondary-color);
+}
+
+.form-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+/* Toast提示样式 */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 4px;
+    z-index: 1000;
+    transition: opacity 0.3s ease-in-out;
+}
+
+/* 响应式布局 */
 @media (max-width: 768px) {
     .content {
         flex-direction: column;
     }
     
-    .preview-panel, .editor-panel {
-        height: 50%;
+    .tools {
+        flex-wrap: wrap;
     }
     
-    .preview-panel {
-        border-right: none;
-        border-bottom: 1px solid #ddd;
+    .preview-panel,
+    .editor-panel {
+        margin: 5px;
     }
+}
+
+/* 工具栏图标样式 */
+.save-icon,
+.settings-icon {
+    background: none;
+    border: none;
+    color: var(--secondary-color);
+    padding: 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.save-icon:hover,
+.settings-icon:hover {
+    background-color: var(--border-color);
+}
+
+/* 复选框样式 */
+input[type="checkbox"] {
+    margin-right: 5px;
+}
+
+/* 加载动画 */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading::after {
+    content: "";
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s linear infinite;
+    margin-left: 8px;
+}
+
+/* 错误提示样式 */
+.error-message {
+    color: var(--error-color);
+    padding: 10px;
+    border: 1px solid var(--error-color);
+    border-radius: 4px;
+    margin: 10px 0;
+    background-color: rgba(231, 76, 60, 0.1);
 }
 
 /* 顶部工具栏其他选项 */

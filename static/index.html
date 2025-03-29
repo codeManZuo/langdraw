@@ -49,13 +49,17 @@
                         <!-- 模板选项将通过JS动态添加 -->
                     </select>
                 </div>
+                <div class="nl-drawing">
+                    <input type="checkbox" id="enable-nl-drawing" />
+                    <label for="enable-nl-drawing">启用自然语言绘图</label>
+                </div>
                 <div class="use-kroki">
                     <input type="checkbox" id="use-kroki" />
                     <label for="use-kroki">使用Kroki渲染</label>
                 </div>
-                <div class="regenerate">
-                    <button id="regenerate-btn" class="regenerate-icon" title="重新生成">
-                        <i class="fas fa-sync-alt"></i>
+                <div class="save">
+                    <button id="save-btn" class="save-icon" title="保存">
+                        <i class="fas fa-save"></i>
                     </button>
                 </div>
                 <div class="settings">
@@ -78,9 +82,15 @@
             
             <!-- 右侧编辑区域 -->
             <div class="editor-panel">
-                <div class="panel-header">编辑器</div>
+                <div class="panel-header">
+                    编辑器
+                    <button id="editor-switch" class="editor-switch" title="切换编辑器">
+                        <i class="fas fa-exchange-alt"></i>
+                    </button>
+                </div>
                 <div class="editor-container">
                     <textarea id="code-editor"></textarea>
+                    <textarea id="nl-editor" style="display: none;"></textarea>
                 </div>
             </div>
         </main>
@@ -97,12 +107,6 @@
                 <div class="form-group">
                     <label for="openrouter-key">OpenRouter API Key:</label>
                     <input type="password" id="openrouter-key" name="openrouter-key">
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="enable-nl-drawing" name="enable-nl-drawing">
-                        启用自然语言绘图
-                    </label>
                 </div>
             </div>
             <div class="modal-footer">
