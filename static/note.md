@@ -1362,3 +1362,58 @@ function toggleEditor() {
 2. 测试不同状态下的编辑器切换，确保没有意外行为
 3. 验证所有现有功能在新 UI 下正常工作
 4. 检查编辑器内容保持一致，切换不会导致内容丢失
+
+## 提示词模板系统
+
+为了使自然语言绘图更加灵活且易于维护，我们实现了一个提示词模板系统。
+
+### 模板配置
+
+提示词模板存储在 `static/config/prompts.json` 文件中，使用JSON格式定义。系统在启动时加载这些模板，并在处理请求时使用。
+
+当前支持的模板类型:
+
+1. `nl_drawing`: 通用自然语言绘图模板
+   - `default`: 默认模板，包含完整的转义和格式说明
+   - `simplified`: 简化版模板，适用于简单的绘图需求
+
+2. `mermaid_specific`: Mermaid特定图表模板
+   - `flowchart`: 流程图专用模板
+   - `sequence`: 时序图专用模板
+   - `class`: 类图专用模板
+
+3. `plantuml_specific`: PlantUML特定模板
+   - `default`: PlantUML通用模板
+
+### 使用方法
+
+在API请求中，可以通过以下参数指定使用的模板:
+
+```javascript
+{
+  "api_key": "your-api-key",
+  "user_context": "用户输入的上下文",
+  "draw_tool_name": "mermaid",
+  "draw_type": "流程图",
+  "template_type": "mermaid_specific",  // 模板类型
+  "template_name": "flowchart"          // 模板名称
+}
+```
+
+如果未指定模板类型和名称，系统将默认使用 `nl_drawing` 类型的 `default` 模板。
+
+### 重新加载模板
+
+如果在运行时修改了模板配置文件，可以通过调用 `/api/reload-templates` API端点重新加载模板，无需重启服务:
+
+```
+POST /api/reload-templates
+```
+
+### 扩展模板
+
+要添加新的模板，只需在 `prompts.json` 文件中添加新的类型或在现有类型下添加新的模板即可。模板中可以使用以下变量:
+
+- `{user_context}`: 用户提供的上下文信息
+- `{draw_tool_name}`: 绘图工具名称 (如 "mermaid", "plantuml" 等)
+- `{draw_type}`: 图表类型 (如 "流程图", "时序图" 等)

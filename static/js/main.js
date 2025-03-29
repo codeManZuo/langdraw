@@ -8,9 +8,12 @@ document.addEventListener('DOMContentLoaded', function() {
     let nlEditor;                        // 自然语言编辑器实例
     let renderTimeout = null;            // 渲染延时器
     let streamRenderInterval = null;     // 流式渲染定时器
+    
+    // 从localStorage获取设置或使用默认值
+    const savedEnableNLDrawing = localStorage.getItem('enableNLDrawing');
     let settings = {                     // 设置对象
         openrouterKey: localStorage.getItem('openrouterKey') || '',
-        enableNLDrawing: localStorage.getItem('enableNLDrawing') === 'true',
+        enableNLDrawing: savedEnableNLDrawing !== null ? savedEnableNLDrawing === 'true' : true, // 如果未设置，默认启用
         autoRender: localStorage.getItem('autoRender') !== 'false' // 默认开启自动渲染
     };
     let isProcessingNLDrawing = false;   // 添加标志变量
@@ -23,10 +26,13 @@ document.addEventListener('DOMContentLoaded', function() {
         modal.classList.remove('show');
     });
     
-    // 如果没有API密钥但启用了自然语言绘图，则静默禁用
+    // 如果没有API密钥但启用了自然语言绘图，提示用户设置
     if (settings.enableNLDrawing && !settings.openrouterKey) {
-        settings.enableNLDrawing = false;
-        localStorage.setItem('enableNLDrawing', 'false');
+        // 延迟显示提示，确保页面先加载完成
+        setTimeout(() => {
+            // 仍然保持启用状态，但显示提示
+            showToast('请设置API密钥以使用自然语言绘图功能', 5000);
+        }, 1500);
     }
     
     // 创建toast提示元素
@@ -226,13 +232,11 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // 如果要启用自然语言绘图，先检查API密钥
             if (isEnabled && !settings.openrouterKey) {
-                // 阻止切换
-                e.target.checked = false;
-                showToast('请先设置API密钥');
+                // 允许勾选，但显示设置对话框提示设置API密钥
+                showToast('请设置API密钥以使用自然语言绘图功能');
                 
                 // 显示设置对话框
                 document.getElementById('settings-modal').classList.add('show');
-                return;
             }
             
             settings.enableNLDrawing = isEnabled;
@@ -657,18 +661,21 @@ document.addEventListener('DOMContentLoaded', function() {
             const newKey = openrouterKeyInput.value.trim();
             const newEnableNLDrawing = enableNLDrawingCheckbox.checked;
             
-            // 如果要启用自然语言绘图但没有API密钥，显示提示并禁用自然语言绘图
+            // 如果要启用自然语言绘图但没有API密钥，显示提示但仍允许启用
             if (newEnableNLDrawing && !newKey) {
-                showToast('需要设置API密钥才能使用自然语言绘图功能');
-                enableNLDrawingCheckbox.checked = false;
-                document.getElementById('enable-nl-drawing').checked = false;
-                settings.enableNLDrawing = false;
+                showToast('需要设置API密钥才能使用自然语言绘图功能', 5000);
+                // 仍然保存用户选择的设置
+                settings.enableNLDrawing = newEnableNLDrawing;
             } else {
                 // 正常保存设置
-                settings.openrouterKey = newKey;
                 settings.enableNLDrawing = newEnableNLDrawing;
-                document.getElementById('enable-nl-drawing').checked = newEnableNLDrawing;
             }
+            
+            // 保存API密钥
+            settings.openrouterKey = newKey;
+            
+            // 更新UI状态
+            document.getElementById('enable-nl-drawing').checked = newEnableNLDrawing;
             
             // 保存到localStorage
             localStorage.setItem('openrouterKey', settings.openrouterKey);
@@ -703,14 +710,17 @@ document.addEventListener('DOMContentLoaded', function() {
         // 初始化渲染
         renderDiagram(true);
         
+        // 如果启用了自然语言绘图，自动切换到自然语言编辑器
+        if (settings.enableNLDrawing) {
+            // 延迟切换以确保UI元素已加载完成
+            setTimeout(() => {
+                switchToEditor('nl');
+            }, 200);
+        }
+        
         // 延迟标记初始加载完成
         setTimeout(() => {
             isInitialLoad = false;
         }, 500);
-        
-        // 如果是自然语言绘图模式，可能需要调整初始视图
-        if (settings.enableNLDrawing) {
-            switchToEditor('nl');
-        }
     }
 }); 
