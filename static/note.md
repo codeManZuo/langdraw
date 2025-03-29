@@ -1030,3 +1030,137 @@ function updateEditorsState() {
 2. 在处理状态变化时避免不必要的渲染操作
 3. 为长时间编辑大型图表的用户，禁用自动渲染可以提高编辑性能
 4. 默认启用自动渲染能够为新用户提供即时反馈，提升初次使用体验
+
+### 7. 图表编辑器锁定提示优化
+
+#### 7.1 需求描述
+- **问题背景**：在启用自然语言绘图模式后，尝试修改图表编辑器内容时没有正确显示编辑器已锁定的提示对话框
+- **目标**：优化用户体验，为用户提供明确的反馈
+- **具体需求**：
+  1. 交互优化：
+     - 在自然语言绘图模式下，当用户点击图表编辑器时，显示编辑器已锁定的提示对话框
+     - 对话框应提供两个选项：关闭自然语言绘图模式或取消操作
+  2. 体验改进：
+     - 确保对话框只在用户主动点击编辑器时出现
+     - 确保同一时间只显示一个对话框，避免重复弹出
+     - 确保对话框能正确关闭
+
+#### 7.2 验收标准
+1. 功能要求：
+   - 在自然语言绘图模式下点击图表编辑器时，应弹出提示对话框
+   - 对话框应包含解释文字和两个按钮（关闭自然语言绘图模式和取消）
+   - 点击关闭自然语言绘图按钮，应关闭自然语言绘图模式并更新编辑器状态
+   - 点击取消按钮或对话框外部，应仅关闭对话框
+2. 技术要求：
+   - 避免重复添加事件监听器
+   - 确保对话框在所有情况下都能正确显示和关闭
+   - 同一时间只允许存在一个提示对话框
+
+#### 7.3 实现方案
+```javascript
+/**
+ * 更新编辑器状态
+ */
+function updateEditorsState() {
+    const isNLDrawingEnabled = document.getElementById('enable-nl-drawing').checked;
+    
+    // 设置绘图文本编辑器的只读状态
+    diagramEditor.setOption('readOnly', isNLDrawingEnabled);
+    
+    // 更新编辑器的视觉提示
+    const diagramWrapper = diagramEditor.getWrapperElement();
+    if (isNLDrawingEnabled) {
+        diagramWrapper.classList.add('readonly');
+        
+        // 如果开启了自然语言绘图，自动渲染选项应当被禁用
+        document.getElementById('enable-auto-render').disabled = true;
+        
+        // 添加点击事件监听器，当用户点击编辑器时显示提示
+        if (!diagramWrapper.hasAttribute('data-has-click-listener')) {
+            diagramWrapper.addEventListener('click', function(e) {
+                if (document.getElementById('enable-nl-drawing').checked) {
+                    showReadOnlyDialog();
+                }
+            });
+            // 设置标记，避免重复添加事件监听器
+            diagramWrapper.setAttribute('data-has-click-listener', 'true');
+        }
+    } else {
+        diagramWrapper.classList.remove('readonly');
+        
+        // 如果关闭了自然语言绘图，自动渲染选项应当被启用
+        document.getElementById('enable-auto-render').disabled = false;
+    }
+}
+
+/**
+ * 显示只读提示对话框
+ */
+function showReadOnlyDialog() {
+    // 检查是否已有对话框显示
+    const existingDialog = document.querySelector('.modal.read-only-dialog');
+    if (existingDialog) {
+        return; // 如果已有对话框显示，不再显示新的
+    }
+    
+    const { title, content, confirmText, cancelText } = config.editor.readOnlyMessage;
+    
+    const dialog = document.createElement('div');
+    dialog.className = 'modal read-only-dialog show'; // 直接添加 show 类
+    dialog.innerHTML = `
+        <div class="modal-content">
+            <h3>${title}</h3>
+            <p>${content}</p>
+            <div class="modal-footer">
+                <button class="confirm">${confirmText}</button>
+                <button class="cancel">${cancelText}</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(dialog);
+    
+    // 点击确认按钮，关闭自然语言绘图模式
+    dialog.querySelector('.confirm').addEventListener('click', () => {
+        document.getElementById('enable-nl-drawing').checked = false;
+        settings.enableNLDrawing = false;
+        localStorage.setItem('enableNLDrawing', 'false');
+        dialog.remove();
+        
+        // 更新编辑器状态
+        updateEditorsState();
+    });
+    
+    // 点击取消按钮，仅关闭对话框
+    dialog.querySelector('.cancel').addEventListener('click', () => {
+        dialog.remove();
+    });
+    
+    // 点击对话框外部关闭
+    dialog.addEventListener('click', function(e) {
+        if (e.target === dialog) {
+            dialog.remove();
+        }
+    });
+}
+```
+
+#### 7.4 关键设计说明
+1. **事件监听优化**
+   - 使用 `data-has-click-listener` 属性标记，避免重复添加事件监听器
+   - 只在自然语言绘图模式开启时添加点击事件监听器
+
+2. **对话框管理**
+   - 在显示对话框前，先检查是否已有对话框显示，避免重复弹出
+   - 直接在创建对话框时添加 `show` 类，确保对话框立即显示
+   - 添加点击对话框外部关闭的功能，提升用户体验
+
+3. **状态管理**
+   - 当用户选择关闭自然语言绘图模式时，更新编辑器状态，确保状态一致性
+   - 使用 localStorage 保存设置，确保刷新页面后保持用户的设置
+
+#### 7.5 注意事项
+1. 确保对话框的 z-index 足够高，以避免被其他元素遮挡
+2. 考虑对话框的响应式设计，确保在不同屏幕尺寸下显示正常
+3. 测试在快速多次点击的情况下对话框的行为是否正常
+4. 确保按钮文本清晰易懂，明确表示操作的后果

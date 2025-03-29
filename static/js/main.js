@@ -145,16 +145,16 @@ document.addEventListener('DOMContentLoaded', function() {
      * 显示只读提示对话框
      */
     function showReadOnlyDialog() {
-        const { title, content, confirmText, cancelText } = config.editor.readOnlyMessage;
-        
         // 检查是否已有对话框显示
         const existingDialog = document.querySelector('.modal.read-only-dialog');
         if (existingDialog) {
             return; // 如果已有对话框显示，不再显示新的
         }
         
+        const { title, content, confirmText, cancelText } = config.editor.readOnlyMessage;
+        
         const dialog = document.createElement('div');
-        dialog.className = 'modal read-only-dialog';
+        dialog.className = 'modal read-only-dialog show'; // 直接添加 show 类
         dialog.innerHTML = `
             <div class="modal-content">
                 <h3>${title}</h3>
@@ -168,11 +168,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         document.body.appendChild(dialog);
         
-        // 显示对话框
-        setTimeout(() => {
-            dialog.classList.add('show');
-        }, 0);
-        
+        // 点击确认按钮，关闭自然语言绘图模式
         dialog.querySelector('.confirm').addEventListener('click', () => {
             document.getElementById('enable-nl-drawing').checked = false;
             settings.enableNLDrawing = false;
@@ -183,8 +179,16 @@ document.addEventListener('DOMContentLoaded', function() {
             updateEditorsState();
         });
         
+        // 点击取消按钮，仅关闭对话框
         dialog.querySelector('.cancel').addEventListener('click', () => {
             dialog.remove();
+        });
+        
+        // 点击对话框外部关闭
+        dialog.addEventListener('click', function(e) {
+            if (e.target === dialog) {
+                dialog.remove();
+            }
         });
     }
 
@@ -399,6 +403,17 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // 如果开启了自然语言绘图，自动渲染选项应当被禁用
             document.getElementById('enable-auto-render').disabled = true;
+            
+            // 添加点击事件监听器，当用户点击编辑器时显示提示
+            if (!diagramWrapper.hasAttribute('data-has-click-listener')) {
+                diagramWrapper.addEventListener('click', function(e) {
+                    if (document.getElementById('enable-nl-drawing').checked) {
+                        showReadOnlyDialog();
+                    }
+                });
+                // 设置标记，避免重复添加事件监听器
+                diagramWrapper.setAttribute('data-has-click-listener', 'true');
+            }
         } else {
             diagramWrapper.classList.remove('readonly');
             
