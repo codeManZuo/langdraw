@@ -15,15 +15,45 @@ document.addEventListener('DOMContentLoaded', function() {
     let isProcessingNLDrawing = false;   // 添加标志变量
     let lastGeneratedCode = null;        // 存储最后一次生成的代码
     let currentEditor = 'diagram';       // 当前显示的编辑器类型
+    let isInitialLoad = true;            // 标记初始加载状态
     
-    // 初始化自定义编辑器模式
-    initCustomModes();
+    // 确保所有模态框初始时是隐藏的
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.classList.remove('show');
+    });
     
-    // 初始化编辑器
-    initEditors();
+    // 如果没有API密钥但启用了自然语言绘图，则静默禁用
+    if (settings.enableNLDrawing && !settings.openrouterKey) {
+        settings.enableNLDrawing = false;
+        localStorage.setItem('enableNLDrawing', 'false');
+    }
     
-    // 初始化图表库
-    initMermaid();
+    // 创建toast提示元素
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 4px;
+        display: none;
+        z-index: 1000;
+        transition: opacity 0.3s ease-in-out;
+        text-align: center;
+        min-width: 250px;
+        max-width: 80%;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    `;
+    document.body.appendChild(toast);
+    
+    // 初始化顺序很重要
+    initCustomModes();  // 1. 初始化编辑器模式
+    initMermaid();      // 2. 初始化图表库
+    initEditors();      // 3. 初始化编辑器
+    initSettings();     // 4. 初始化设置
     
     // 填充模板选择器
     populateTemplateSelector(currentDiagramType);
@@ -31,27 +61,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // 绑定事件监听器
     bindEventListeners();
     
-    // 初始化设置相关功能
-    initSettings();
-    
     // 默认加载一个简单的Mermaid图表示例
     loadTemplate('mermaid', '流程图');
-
-    // 创建toast提示元素
-    const toast = document.createElement('div');
-    toast.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        background-color: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 10px 20px;
-        border-radius: 4px;
-        display: none;
-        z-index: 1000;
-        transition: opacity 0.3s ease-in-out;
-    `;
-    document.body.appendChild(toast);
+    
+    // 设置初始UI状态
+    document.getElementById('enable-nl-drawing').checked = settings.enableNLDrawing;
+    updateEditorsState();
+    
+    // 页面加载完成后，移除初始加载标记
+    setTimeout(function() {
+        isInitialLoad = false;
+    }, 1000);
 
     /**
      * 初始化编辑器
@@ -83,6 +103,15 @@ document.addEventListener('DOMContentLoaded', function() {
             indentWithTabs: false
         });
         
+        // 添加编辑器内容变化事件
+        diagramEditor.on('change', function(cm, change) {
+            // 仅当用户手动输入（非程序设置值）时进行实时渲染
+            if (change.origin !== 'setValue' && change.origin !== 'undo' && change.origin !== 'redo') {
+                // 实时渲染预览
+                renderDiagram(false);
+            }
+        });
+        
         // 设置编辑器权限控制
         setupEditorPermissions();
     }
@@ -92,10 +121,17 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     function setupEditorPermissions() {
         diagramEditor.on('beforeChange', function(cm, change) {
-            if (document.getElementById('enable-nl-drawing').checked) {
+            // 如果是初始加载或通过程序设置值，不显示对话框
+            if (isInitialLoad || change.origin === 'setValue') {
+                return true;
+            }
+            
+            // 只有当启用了自然语言绘图并有API密钥时才显示对话框
+            if (document.getElementById('enable-nl-drawing').checked && settings.openrouterKey) {
                 showReadOnlyDialog();
                 return false; // 阻止编辑
             }
+            return true;
         });
     }
 
@@ -105,8 +141,14 @@ document.addEventListener('DOMContentLoaded', function() {
     function showReadOnlyDialog() {
         const { title, content, confirmText, cancelText } = config.editor.readOnlyMessage;
         
+        // 检查是否已有对话框显示
+        const existingDialog = document.querySelector('.modal.read-only-dialog');
+        if (existingDialog) {
+            return; // 如果已有对话框显示，不再显示新的
+        }
+        
         const dialog = document.createElement('div');
-        dialog.className = 'modal';
+        dialog.className = 'modal read-only-dialog';
         dialog.innerHTML = `
             <div class="modal-content">
                 <h3>${title}</h3>
@@ -120,12 +162,19 @@ document.addEventListener('DOMContentLoaded', function() {
         
         document.body.appendChild(dialog);
         
+        // 显示对话框
+        setTimeout(() => {
+            dialog.classList.add('show');
+        }, 0);
+        
         dialog.querySelector('.confirm').addEventListener('click', () => {
             document.getElementById('enable-nl-drawing').checked = false;
+            settings.enableNLDrawing = false;
+            localStorage.setItem('enableNLDrawing', 'false');
             dialog.remove();
-            // 触发change事件以更新状态
-            const event = new Event('change');
-            document.getElementById('enable-nl-drawing').dispatchEvent(event);
+            
+            // 更新编辑器状态
+            updateEditorsState();
         });
         
         dialog.querySelector('.cancel').addEventListener('click', () => {
@@ -136,7 +185,7 @@ document.addEventListener('DOMContentLoaded', function() {
     /**
      * 显示toast提示
      */
-    function showToast(message, duration = 2000) {
+    function showToast(message, duration = 3000) {
         toast.textContent = message;
         toast.style.display = 'block';
         toast.style.opacity = '1';
@@ -147,6 +196,40 @@ document.addEventListener('DOMContentLoaded', function() {
                 toast.style.display = 'none';
             }, 300);
         }, duration);
+    }
+
+    /**
+     * 监听自然语言绘图开关
+     */
+    function setupNLDrawingListeners() {
+        document.getElementById('enable-nl-drawing').addEventListener('change', function(e) {
+            // 如果是初始加载，忽略事件处理
+            if (isInitialLoad) return;
+            
+            const isEnabled = e.target.checked;
+            
+            // 如果要启用自然语言绘图，先检查API密钥
+            if (isEnabled && !settings.openrouterKey) {
+                // 阻止切换
+                e.target.checked = false;
+                showToast('请先设置API密钥');
+                
+                // 显示设置对话框
+                document.getElementById('settings-modal').classList.add('show');
+                return;
+            }
+            
+            settings.enableNLDrawing = isEnabled;
+            localStorage.setItem('enableNLDrawing', isEnabled);
+            
+            // 更新编辑器状态
+            updateEditorsState();
+            
+            // 如果启用，自动切换到自然语言编辑器
+            if (isEnabled && currentEditor === 'diagram') {
+                toggleEditor();
+            }
+        });
     }
 
     /**
@@ -186,14 +269,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // 监听保存按钮
         document.getElementById('save-btn').addEventListener('click', handleSave);
         
-        // 监听自然语言绘图开关
-        document.getElementById('enable-nl-drawing').addEventListener('change', function(e) {
-            settings.enableNLDrawing = e.target.checked;
-            localStorage.setItem('enableNLDrawing', settings.enableNLDrawing);
-            
-            // 更新编辑器状态
-            updateEditorsState();
-        });
+        // 添加自然语言绘图开关监听
+        setupNLDrawingListeners();
 
         // 添加快捷键监听
         document.addEventListener('keydown', function(e) {
@@ -203,21 +280,61 @@ document.addEventListener('DOMContentLoaded', function() {
                 handleSave();
             }
         });
+        
+        // 监听Kroki渲染切换
+        document.getElementById('use-kroki').addEventListener('change', function() {
+            // 如果切换到Kroki渲染，需要手动触发一次渲染
+            renderDiagram(true);
+        });
     }
 
     /**
      * 切换编辑器显示
      */
     function toggleEditor() {
+        // 检查是否启用了自然语言绘图但没有API密钥
+        if (currentEditor === 'diagram' && 
+            document.getElementById('enable-nl-drawing').checked && 
+            !settings.openrouterKey) {
+            
+            // 显示提示并阻止切换
+            showToast('请先设置API密钥才能使用自然语言编辑器');
+            
+            // 显示设置对话框
+            document.getElementById('settings-modal').classList.add('show');
+            return;
+        }
+        
+        const editorPanelHeader = document.querySelector('.editor-panel .panel-header');
+        
         if (currentEditor === 'diagram') {
             diagramEditor.getWrapperElement().style.display = 'none';
             nlEditor.getWrapperElement().style.display = '';
             currentEditor = 'nl';
+            
+            // 更新编辑器面板标题以显示当前是自然语言编辑器
+            editorPanelHeader.innerHTML = `
+                <span class="nl-editor">自然语言编辑器</span>
+                <button id="editor-switch" class="editor-switch" title="切换到图表编辑器">
+                    <i class="fas fa-exchange-alt"></i> 返回图表编辑
+                </button>
+            `;
         } else {
             diagramEditor.getWrapperElement().style.display = '';
             nlEditor.getWrapperElement().style.display = 'none';
             currentEditor = 'diagram';
+            
+            // 更新编辑器面板标题以显示当前是图表编辑器
+            editorPanelHeader.innerHTML = `
+                <span class="diagram-editor">图表编辑器</span>
+                <button id="editor-switch" class="editor-switch" title="切换到自然语言编辑器">
+                    <i class="fas fa-exchange-alt"></i> 切换到自然语言
+                </button>
+            `;
         }
+        
+        // 重新绑定切换按钮事件
+        document.getElementById('editor-switch').addEventListener('click', toggleEditor);
         
         // 刷新编辑器以确保正确显示
         diagramEditor.refresh();
@@ -253,7 +370,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (useNLDrawing) {
             // 获取自然语言内容
-            const nlContent = nlEditor.getValue();
+            const nlContent = nlEditor.getValue().trim();
+            
+            // 检查自然语言编辑器内容是否为空
+            if (!nlContent) {
+                showToast('自然语言编辑器内容为空', 3000);
+                return;
+            }
             
             try {
                 // 调用大语言模型API
@@ -271,7 +394,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 if (!response.ok) {
-                    throw new Error('API请求失败');
+                    throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
                 }
                 
                 // 处理流式响应
@@ -305,12 +428,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         } catch (error) {
                             console.error('解析响应数据错误:', error);
+                            showToast('生成失败: 解析响应数据错误', 3000);
+                            return;
                         }
                     }
                 }
             } catch (error) {
                 console.error('自然语言绘图错误:', error);
-                showToast('生成失败: ' + error.message);
+                showToast('保存失败，请稍后再试: ' + error.message, 3000);
             }
         } else {
             // 直接渲染当前编辑器内容
@@ -450,37 +575,59 @@ document.addEventListener('DOMContentLoaded', function() {
         const openrouterKeyInput = document.getElementById('openrouter-key');
         const enableNLDrawingCheckbox = document.getElementById('enable-nl-drawing');
 
-        // 加载保存的设置
+        // 确保设置弹窗初始时是隐藏的
+        modal.style.display = "none";
+        
+        // 加载保存的设置到设置弹窗中，但不显示弹窗
         openrouterKeyInput.value = settings.openrouterKey;
         enableNLDrawingCheckbox.checked = settings.enableNLDrawing;
-
-        // 打开设置弹窗
+        
+        // 触发设置框的功能 - 只有用户点击按钮时才显示
         settingsBtn.onclick = function() {
-            modal.style.display = "block";
+            // 更新设置弹窗内容（确保反映最新状态）
+            openrouterKeyInput.value = settings.openrouterKey;
+            enableNLDrawingCheckbox.checked = settings.enableNLDrawing;
+            modal.classList.add('show');
         }
 
         // 关闭弹窗
         closeBtn.onclick = function() {
-            modal.style.display = "none";
+            modal.classList.remove('show');
         }
 
         // 点击弹窗外部关闭
         window.onclick = function(event) {
-            if (event.target == modal) {
-                modal.style.display = "none";
+            if (event.target === modal) {
+                modal.classList.remove('show');
             }
         }
 
         // 保存设置
         saveBtn.onclick = function() {
-            settings.openrouterKey = openrouterKeyInput.value;
-            settings.enableNLDrawing = enableNLDrawingCheckbox.checked;
+            const newKey = openrouterKeyInput.value.trim();
+            const newEnableNLDrawing = enableNLDrawingCheckbox.checked;
+            
+            // 如果要启用自然语言绘图但没有API密钥，显示提示并禁用自然语言绘图
+            if (newEnableNLDrawing && !newKey) {
+                showToast('需要设置API密钥才能使用自然语言绘图功能');
+                enableNLDrawingCheckbox.checked = false;
+                document.getElementById('enable-nl-drawing').checked = false;
+                settings.enableNLDrawing = false;
+            } else {
+                // 正常保存设置
+                settings.openrouterKey = newKey;
+                settings.enableNLDrawing = newEnableNLDrawing;
+                document.getElementById('enable-nl-drawing').checked = newEnableNLDrawing;
+            }
             
             // 保存到localStorage
             localStorage.setItem('openrouterKey', settings.openrouterKey);
             localStorage.setItem('enableNLDrawing', settings.enableNLDrawing);
             
-            modal.style.display = "none";
+            modal.classList.remove('show');
+            
+            // 更新编辑器状态
+            updateEditorsState();
             
             // 重新渲染当前图表
             renderDiagram();
@@ -490,7 +637,7 @@ document.addEventListener('DOMContentLoaded', function() {
         cancelBtn.onclick = function() {
             openrouterKeyInput.value = settings.openrouterKey;
             enableNLDrawingCheckbox.checked = settings.enableNLDrawing;
-            modal.style.display = "none";
+            modal.classList.remove('show');
         }
     }
 }); 

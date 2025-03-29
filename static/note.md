@@ -75,6 +75,168 @@
    - 尝试编辑时弹出提示对话框
    - 两个按钮功能符合预期
 
+### 3. 编辑器标识与模态框优化
+
+#### 3.1 需求描述
+- **问题背景**：用户需要明确知道当前使用的是哪种编辑器，并修复一些模态框自动弹出的问题
+- **目标**：优化用户界面体验，减少困惑和干扰
+- **具体需求**：
+  1. 编辑器类型标识：
+     - 在编辑器面板标题中清晰显示当前编辑器类型（"图表编辑器"或"自然语言编辑器"）
+     - 为不同编辑器类型添加差异化的图标提示
+     - 切换编辑器时更新标题和图标
+  2. 模态框显示优化：
+     - 修复初次加载页面时设置框自动弹出的问题
+     - 修复自然语言绘图模式下自动弹出提示对话框的问题
+     - 确保对话框只在用户明确操作时弹出
+
+#### 3.2 验收标准
+1. 编辑器标识：
+   - 编辑器面板显示当前正在使用的编辑器类型名称
+   - 不同编辑器有独特的图标区分
+   - 切换编辑器时，标题和图标自动更新
+2. 模态框优化：
+   - 页面首次加载时不会自动弹出任何对话框
+   - 对话框的显示和隐藏有平滑的过渡效果
+   - 确保多个对话框不会同时显示
+
+#### 3.3 实现方案
+1. **编辑器标识实现**
+```html
+<!-- 编辑器面板标题结构 -->
+<div class="panel-header">
+    <span class="diagram-editor">图表编辑器</span>
+    <button id="editor-switch" class="editor-switch" title="切换到自然语言编辑器">
+        <i class="fas fa-exchange-alt"></i> 切换到自然语言
+    </button>
+</div>
+```
+
+```css
+/* 面板标题样式 */
+.panel-header span {
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+}
+
+/* 编辑器标识图标 */
+.panel-header span::before {
+    margin-right: 8px;
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+}
+
+/* 图表编辑器标识 */
+.panel-header span.diagram-editor::before {
+    content: '\f1c9';  /* 代码文件图标 */
+    color: #4fc3f7;
+}
+
+/* 自然语言编辑器标识 */
+.panel-header span.nl-editor::before {
+    content: '\f27a';  /* 聊天气泡图标 */
+    color: #81c784;
+}
+```
+
+```javascript
+// 切换编辑器时更新标题
+function toggleEditor() {
+    const editorPanelHeader = document.querySelector('.editor-panel .panel-header');
+    
+    if (currentEditor === 'diagram') {
+        // 切换到自然语言编辑器
+        editorPanelHeader.innerHTML = `
+            <span class="nl-editor">自然语言编辑器</span>
+            <button id="editor-switch" class="editor-switch" title="切换到图表编辑器">
+                <i class="fas fa-exchange-alt"></i> 返回图表编辑
+            </button>
+        `;
+    } else {
+        // 切换到图表编辑器
+        editorPanelHeader.innerHTML = `
+            <span class="diagram-editor">图表编辑器</span>
+            <button id="editor-switch" class="editor-switch" title="切换到自然语言编辑器">
+                <i class="fas fa-exchange-alt"></i> 切换到自然语言
+            </button>
+        `;
+    }
+    
+    // 重新绑定切换按钮事件
+    document.getElementById('editor-switch').addEventListener('click', toggleEditor);
+}
+```
+
+2. **模态框优化实现**
+```css
+/* 模态对话框样式 */
+.modal {
+    display: none; /* 默认隐藏 */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+/* 使用单独的类控制显示模态框 */
+.modal.show {
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+}
+```
+
+```javascript
+// 使用类控制模态框显示和隐藏
+function showModal(modal) {
+    modal.classList.add('show');
+}
+
+function hideModal(modal) {
+    modal.classList.remove('show');
+}
+
+// 初始化处理
+document.addEventListener('DOMContentLoaded', function() {
+    // 确保所有模态框初始时是隐藏的
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.classList.remove('show');
+    });
+    
+    // 如果没有API密钥但启用了自然语言绘图，则静默禁用
+    if (settings.enableNLDrawing && !settings.openrouterKey) {
+        settings.enableNLDrawing = false;
+        localStorage.setItem('enableNLDrawing', 'false');
+    }
+});
+```
+
+#### 3.4 关键设计说明
+1. **编辑器标识设计**
+   - 使用CSS类控制不同编辑器的图标和样式
+   - 在切换编辑器时动态更新DOM元素
+   - 通过CSS伪元素添加图标，避免额外的HTML元素
+
+2. **模态框交互优化**
+   - 使用CSS类控制模态框的显示和隐藏
+   - 添加初始化逻辑防止自动弹出
+   - 检查条件避免不必要的模态框显示
+
+3. **用户体验提升**
+   - 添加直观的视觉提示
+   - 平滑的过渡动画
+   - 减少不必要的干扰
+
+#### 3.5 注意事项
+1. 确保在DOM更新后重新绑定事件监听器
+2. 检查多个对话框之间的交互
+3. 确保CSS选择器的浏览器兼容性
+4. 初始化顺序很重要，避免初始加载时的闪烁
+
 ## 技术方案
 
 ### 1. 快捷键保存与渲染优化
@@ -103,19 +265,27 @@ stop
 const toast = document.createElement('div');
 toast.style.cssText = `
     position: fixed;
-    bottom: 20px;
-    right: 20px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     background-color: rgba(0, 0, 0, 0.8);
     color: white;
-    padding: 10px 20px;
+    padding: 12px 24px;
     border-radius: 4px;
     display: none;
     z-index: 1000;
     transition: opacity 0.3s ease-in-out;
+    text-align: center;
+    min-width: 250px;
+    max-width: 80%;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 `;
+document.body.appendChild(toast);
 
-// Toast显示函数
-function showToast(message, duration = 2000) {
+/**
+ * 显示toast提示
+ */
+function showToast(message, duration = 3000) {
     toast.textContent = message;
     toast.style.display = 'block';
     toast.style.opacity = '1';
@@ -381,15 +551,36 @@ async function handleSave() {
     const useNLDrawing = document.getElementById('enable-nl-drawing').checked;
     const useKroki = document.getElementById('use-kroki').checked;
     
+    showToast('开始保存...');
+    
     if (useNLDrawing) {
-        // 获取自然语言内容
-        const nlContent = nlEditor.getValue();
+        // 获取自然语言内容并去除首尾空格
+        const nlContent = nlEditor.getValue().trim();
+        
+        // 检查自然语言编辑器内容是否为空
+        if (!nlContent) {
+            showToast('自然语言编辑器内容为空', 3000);
+            return;
+        }
         
         try {
             // 调用大语言模型API
             const response = await fetch('/api/nl-draw', {
-                // ... API调用配置
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    api_key: settings.openrouterKey,
+                    user_context: nlContent,
+                    draw_tool_name: currentDiagramType,
+                    draw_type: document.getElementById('template-select').value || '流程图'
+                })
             });
+            
+            if (!response.ok) {
+                throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+            }
             
             // 处理流式响应
             const reader = response.body.getReader();
@@ -401,18 +592,40 @@ async function handleSave() {
                 
                 // 更新绘图文本编辑器
                 const chunk = new TextDecoder().decode(value);
-                accumulatedCode += chunk;
-                diagramEditor.setValue(accumulatedCode);
+                const lines = chunk.split('\n').filter(line => line.trim());
+                
+                for (const line of lines) {
+                    try {
+                        const data = JSON.parse(line);
+                        
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+                        
+                        accumulatedCode = data.code;
+                        diagramEditor.setValue(accumulatedCode);
+                        
+                        // 如果是最终响应
+                        if (data.done) {
+                            // 完成后渲染
+                            renderDiagram(true);
+                            showToast('生成完成');
+                        }
+                    } catch (error) {
+                        console.error('解析响应数据错误:', error);
+                        showToast('生成失败: 解析响应数据错误', 3000);
+                        return;
+                    }
+                }
             }
-            
-            // 完成后渲染
-            renderDiagram(true);
         } catch (error) {
-            showToast('生成失败: ' + error.message);
+            console.error('自然语言绘图错误:', error);
+            showToast('保存失败，请稍后再试: ' + error.message, 3000);
         }
     } else {
         // 直接渲染当前编辑器内容
         renderDiagram(true);
+        showToast('保存成功');
     }
 }
 
@@ -458,3 +671,225 @@ function renderDiagram(forceRender = false) {
 3. 优化流式响应的更新频率，避免过于频繁的重渲染
 4. 提供清晰的错误提示和状态反馈
 5. 注意模态对话框的层级管理
+
+### 4. 自然语言绘图输入检查与错误处理优化
+
+#### 4.1 需求描述
+- **问题背景**：自然语言绘图功能在用户保存时缺乏输入有效性检查和错误处理，导致用户体验不佳
+- **目标**：提升自然语言绘图保存流程的健壮性和用户体验
+- **具体需求**：
+  1. 空内容检查：
+     - 启用自然语言绘图时，检查自然语言编辑器内容是否为空
+     - 内容为空时不调用API，直接显示提示信息要求用户输入内容
+  2. 错误处理增强：
+     - 统一处理API请求过程中可能出现的各类错误
+     - 针对不同错误类型提供友好的提示信息
+     - 包含HTTP错误、解析错误和其他异常情况的处理
+
+#### 4.2 验收标准
+1. 空内容处理：
+   - 在自然语言编辑器内容为空时点击保存，显示明确的提示信息
+   - 不会触发API调用，避免不必要的请求
+2. 错误处理：
+   - API返回非200状态码时，显示适当的错误信息
+   - 响应数据解析错误时，显示相关提示
+   - 所有错误提示应清晰明了，指导用户后续操作
+3. 用户体验：
+   - 错误提示显示足够长的时间（至少3秒）确保用户能够阅读
+   - 错误提示应包含简明的错误原因
+   - 提示风格与已有toast提示保持一致
+
+#### 4.3 实现方案
+```javascript
+/**
+ * 处理保存操作
+ */
+async function handleSave() {
+    const useNLDrawing = document.getElementById('enable-nl-drawing').checked;
+    const useKroki = document.getElementById('use-kroki').checked;
+    
+    showToast('开始保存...');
+    
+    if (useNLDrawing) {
+        // 获取自然语言内容并去除首尾空格
+        const nlContent = nlEditor.getValue().trim();
+        
+        // 检查自然语言编辑器内容是否为空
+        if (!nlContent) {
+            showToast('请先在自然语言编辑器中输入内容', 3000);
+            return;
+        }
+        
+        try {
+            // 调用大语言模型API
+            const response = await fetch('/api/nl-draw', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    api_key: settings.openrouterKey,
+                    user_context: nlContent,
+                    draw_tool_name: currentDiagramType,
+                    draw_type: document.getElementById('template-select').value || '流程图'
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+            }
+            
+            // 处理流式响应
+            const reader = response.body.getReader();
+            let accumulatedCode = '';
+            
+            while (true) {
+                const {value, done} = await reader.read();
+                if (done) break;
+                
+                // 更新绘图文本编辑器
+                const chunk = new TextDecoder().decode(value);
+                const lines = chunk.split('\n').filter(line => line.trim());
+                
+                for (const line of lines) {
+                    try {
+                        const data = JSON.parse(line);
+                        
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+                        
+                        accumulatedCode = data.code;
+                        diagramEditor.setValue(accumulatedCode);
+                        
+                        // 如果是最终响应
+                        if (data.done) {
+                            // 完成后渲染
+                            renderDiagram(true);
+                            showToast('生成完成');
+                        }
+                    } catch (error) {
+                        console.error('解析响应数据错误:', error);
+                        showToast('生成失败: 解析响应数据错误', 3000);
+                        return;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('自然语言绘图错误:', error);
+            showToast('保存失败，请稍后再试: ' + error.message, 3000);
+        }
+    } else {
+        // 直接渲染当前编辑器内容
+        renderDiagram(true);
+        showToast('保存成功');
+    }
+}
+```
+
+#### 4.4 关键设计说明
+1. **输入验证**
+   - 使用 `String.trim()` 移除输入内容的首尾空格
+   - 在调用API前进行非空检查，避免无效请求
+   - 提供明确的用户反馈，指导用户输入内容
+
+2. **错误处理策略**
+   - 采用三层错误处理机制：
+     1. HTTP响应状态码检查
+     2. API返回的错误字段检查
+     3. JSON解析错误捕获
+   - 为不同错误类型提供具体的错误信息
+
+3. **用户体验优化**
+   - 延长错误提示的显示时间（3000ms）
+   - 提供清晰的错误来源描述，便于用户理解
+   - 统一错误提示格式，保持一致的用户体验
+
+#### 4.5 注意事项
+1. 确保错误信息足够明确但不过于技术化
+2. 在网络不稳定环境中测试错误处理机制
+3. 考虑添加重试机制，提高成功率
+4. 保留详细错误日志，便于后期分析和改进
+
+### 5. Toast提示优化
+
+#### 5.1 需求描述
+- **问题背景**：当前 Toast 提示显示在页面右下角，不够明显，且不同提示的显示时间不一致
+- **目标**：优化 Toast 提示的位置和显示时间，提升用户体验
+- **具体需求**：
+  1. 位置调整：
+     - 将 Toast 提示从右下角移动到页面正中央
+     - 确保提示在任何页面状态下都足够醒目
+  2. 显示时间统一：
+     - 将所有 Toast 提示的默认显示时间统一为 3 秒
+     - 确保用户有足够时间阅读提示内容
+
+#### 5.2 验收标准
+1. 位置要求：
+   - Toast 提示应显示在页面正中央
+   - 采用视觉上突出的样式
+   - 内容居中对齐
+2. 时间控制：
+   - 所有 Toast 提示的默认显示时间为 3 秒
+   - 提示消失时应有平滑的过渡效果
+
+#### 5.3 实现方案
+```javascript
+// 创建toast提示元素
+const toast = document.createElement('div');
+toast.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 4px;
+    display: none;
+    z-index: 1000;
+    transition: opacity 0.3s ease-in-out;
+    text-align: center;
+    min-width: 250px;
+    max-width: 80%;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+`;
+document.body.appendChild(toast);
+
+/**
+ * 显示toast提示
+ */
+function showToast(message, duration = 3000) {
+    toast.textContent = message;
+    toast.style.display = 'block';
+    toast.style.opacity = '1';
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            toast.style.display = 'none';
+        }, 300);
+    }, duration);
+}
+```
+
+#### 5.4 关键设计说明
+1. **位置设计**
+   - 使用 `position: fixed` 确保 Toast 不受页面滚动影响
+   - 通过 `top: 50%; left: 50%; transform: translate(-50%, -50%)` 实现完美居中
+   - 添加 `min-width` 和 `max-width` 控制显示宽度，适应不同长度的提示内容
+   - 增加 `box-shadow` 提高视觉层次感，使提示更加醒目
+
+2. **时间控制**
+   - 默认显示时间从 2 秒调整为 3 秒，确保用户有足够时间阅读提示内容
+   - 保留 300ms 的渐隐过渡时间，提供平滑的视觉体验
+
+3. **视觉优化**
+   - 文本居中对齐，提高可读性
+   - 增加内边距，使内容展示更加舒适
+   - 半透明黑色背景与白色文字形成强烈对比，提高可读性
+
+#### 5.5 注意事项
+1. 确保 Toast 的 z-index 足够高，以避免被其他元素遮挡
+2. 对于特别重要的提示信息，可考虑在调用时手动设置更长的显示时间
+3. 移动端适配时确保 max-width 的百分比设置能适应各种屏幕尺寸

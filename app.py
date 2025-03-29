@@ -74,7 +74,7 @@ def natural_language_draw():
                         full_response += content
                         
                         # 打印流式数据
-                        print(f"流式数据片段: {content}")
+                        # print(f"流式数据片段: {content}")
                         # print(f"当前累积响应: {full_response}")
                         
                         # 发送当前累积的响应
@@ -85,7 +85,7 @@ def natural_language_draw():
 
                 # 处理最终的完整响应
                 final_response = full_response.strip()
-                print(f"\n完整响应处理前: {final_response}")
+                # print(f"\n完整响应处理前: {final_response}")
                 
                 # 处理代码块标记
                 if final_response.startswith('```') and final_response.endswith('```'):

@@ -160,7 +160,7 @@ button.icon-only {
 
 /* 模态对话框样式 */
 .modal {
-    display: none;
+    display: none; /* 默认隐藏 */
     position: fixed;
     top: 0;
     left: 0;
@@ -168,7 +168,11 @@ button.icon-only {
     height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
     z-index: 1000;
-    display: flex;
+}
+
+/* 使用单独的类控制显示模态框 */
+.modal.show {
+    display: flex !important;
     justify-content: center;
     align-items: center;
 }
@@ -180,6 +184,8 @@ button.icon-only {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     max-width: 500px;
     width: 90%;
+    position: relative;
+    margin: auto;
 }
 
 .modal-header {
@@ -503,4 +509,52 @@ input[type="checkbox"] {
     to {
         transform: rotate(360deg);
     }
+}
+
+/* 面板标题样式增强 */
+.panel-header span {
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+}
+
+/* 编辑器标识图标 */
+.panel-header span::before {
+    margin-right: 8px;
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+}
+
+/* 图表编辑器标识 */
+.panel-header span.diagram-editor::before {
+    content: '\f1c9';  /* 代码文件图标 */
+    color: #4fc3f7;
+}
+
+/* 自然语言编辑器标识 */
+.panel-header span.nl-editor::before {
+    content: '\f27a';  /* 聊天气泡图标 */
+    color: #81c784;
+}
+
+/* 当前编辑器标题样式 */
+.panel-header span {
+    position: relative;
+    padding-bottom: 3px;
+}
+
+.panel-header span::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: rgba(255, 255, 255, 0.5);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.panel-header span:hover::after {
+    transform: scaleX(1);
 } 
