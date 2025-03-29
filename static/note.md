@@ -1,4 +1,4 @@
-# KIRO 在线绘图工具 - 需求与技术方案文档
+# LangDraw 在线绘图工具 - 需求与技术方案文档
 
 ## 目录
 1. [功能需求](#功能需求)
@@ -716,7 +716,7 @@ async function handleSave() {
         
         // 检查自然语言编辑器内容是否为空
         if (!nlContent) {
-            showToast('请先在自然语言编辑器中输入内容', 3000);
+            showToast('自然语言编辑器内容为空', 3000);
             return;
         }
         
@@ -893,3 +893,140 @@ function showToast(message, duration = 3000) {
 1. 确保 Toast 的 z-index 足够高，以避免被其他元素遮挡
 2. 对于特别重要的提示信息，可考虑在调用时手动设置更长的显示时间
 3. 移动端适配时确保 max-width 的百分比设置能适应各种屏幕尺寸
+
+### 6. 自动渲染功能优化
+
+#### 6.1 需求描述
+- **问题背景**：目前系统在普通模式下总是自动渲染图表，而在自然语言绘图模式下需要手动保存触发渲染，用户无法控制普通模式下的渲染行为
+- **目标**：提供更灵活的渲染控制选项，让用户可以决定是否使用自动渲染
+- **具体需求**：
+  1. 自动渲染控制：
+     - 添加"启用自动渲染"选项到工具栏
+     - 该选项默认开启
+     - 用户可以通过勾选框控制是否启用自动渲染
+  2. 条件限制：
+     - 自动渲染功能仅在非自然语言绘图模式下生效
+     - 当启用自然语言绘图时，自动渲染选项应被禁用
+  3. 功能逻辑：
+     - 启用自动渲染：编辑内容时自动更新预览
+     - 禁用自动渲染：仅在用户点击保存按钮或使用保存快捷键时才更新预览
+
+#### 6.2 验收标准
+1. 界面要求：
+   - 工具栏中有明确的"启用自动渲染"选项
+   - 选项默认为勾选状态
+   - 在自然语言绘图模式下，该选项呈禁用状态
+2. 功能要求：
+   - 勾选自动渲染时，编辑器内容变化会触发预览更新
+   - 取消勾选时，只有通过保存操作才会更新预览
+   - 切换到自然语言绘图模式后，自动渲染功能自动禁用
+   - 从自然语言绘图模式切换回来后，自动渲染恢复到用户之前设置的状态
+3. 持久化要求：
+   - 用户的自动渲染设置应保存到本地存储
+   - 刷新页面后保持用户的设置选择
+
+#### 6.3 实现方案
+```html
+<!-- 工具栏中添加自动渲染选项 -->
+<div class="auto-render">
+    <input type="checkbox" id="enable-auto-render" checked />
+    <label for="enable-auto-render">启用自动渲染</label>
+</div>
+```
+
+```javascript
+// 设置对象中添加自动渲染属性
+let settings = {
+    openrouterKey: localStorage.getItem('openrouterKey') || '',
+    enableNLDrawing: localStorage.getItem('enableNLDrawing') === 'true',
+    autoRender: localStorage.getItem('autoRender') !== 'false' // 默认开启自动渲染
+};
+
+// 在编辑器内容变化事件中加入自动渲染条件判断
+diagramEditor.on('change', function(cm, change) {
+    // 仅当用户手动输入（非程序设置值）时进行实时渲染
+    if (change.origin !== 'setValue' && change.origin !== 'undo' && change.origin !== 'redo') {
+        // 判断是否启用了自动渲染且未启用自然语言绘图
+        const shouldAutoRender = settings.autoRender && !settings.enableNLDrawing;
+        if (shouldAutoRender) {
+            // 实时渲染预览
+            renderDiagram(false);
+        }
+    }
+});
+
+// 监听自动渲染开关状态变化
+function setupAutoRenderListeners() {
+    document.getElementById('enable-auto-render').addEventListener('change', function(e) {
+        // 如果是初始加载，忽略事件处理
+        if (isInitialLoad) return;
+        
+        const isEnabled = e.target.checked;
+        settings.autoRender = isEnabled;
+        localStorage.setItem('autoRender', isEnabled);
+        
+        // 如果开启了自动渲染，且当前不是自然语言绘图模式，立即触发一次渲染
+        if (isEnabled && !settings.enableNLDrawing) {
+            renderDiagram(false);
+        }
+    });
+}
+
+// 在自然语言绘图状态变化时更新自动渲染选项状态
+function updateEditorsState() {
+    const isNLDrawingEnabled = document.getElementById('enable-nl-drawing').checked;
+    
+    if (isNLDrawingEnabled) {
+        // 如果开启了自然语言绘图，自动渲染选项应当被禁用
+        document.getElementById('enable-auto-render').disabled = true;
+    } else {
+        // 如果关闭了自然语言绘图，自动渲染选项应当被启用
+        document.getElementById('enable-auto-render').disabled = false;
+    }
+}
+```
+
+```css
+/* 工具栏选项样式 */
+.nl-drawing, .use-kroki, .auto-render {
+    margin-right: 15px;
+    display: flex;
+    align-items: center;
+}
+
+.nl-drawing input, .use-kroki input, .auto-render input {
+    margin-right: 5px;
+}
+
+/* 禁用状态的选项样式 */
+.auto-render[disabled], .auto-render input[disabled] + label {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.auto-render input[disabled] {
+    cursor: not-allowed;
+}
+```
+
+#### 6.4 关键设计说明
+1. **状态管理**
+   - 使用 localStorage 保存用户的自动渲染设置
+   - 默认启用自动渲染（autoRender 初始值为 true）
+   - 通过条件判断控制渲染触发时机
+
+2. **交互设计**
+   - 自动渲染选项与自然语言绘图选项的联动关系
+   - 在自然语言绘图模式下禁用自动渲染选项
+   - 从自然语言绘图切换回来时恢复自动渲染状态
+
+3. **视觉反馈**
+   - 使用禁用状态样式明确指示功能可用性
+   - 保持工具栏选项布局一致性
+   - 提供明确的标签文本说明功能
+
+#### 6.5 注意事项
+1. 确保自动渲染状态在不同编辑器模式切换时正确保存和恢复
+2. 在处理状态变化时避免不必要的渲染操作
+3. 为长时间编辑大型图表的用户，禁用自动渲染可以提高编辑性能
+4. 默认启用自动渲染能够为新用户提供即时反馈，提升初次使用体验

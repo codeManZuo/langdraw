@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KIRO</title>
+    <title>LangDraw</title>
     <link rel="stylesheet" href="css/style.css">
     <!-- CodeMirror 编辑器 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/codemirror.min.css">
@@ -25,7 +25,7 @@
     <div class="container">
         <!-- 顶部工具栏 -->
         <header class="toolbar">
-            <div class="logo">KIRO</div>
+            <div class="logo">LangDraw</div>
             <div class="tools">
                 <div class="diagram-type">
                     <label for="diagram-select">图表类型:</label>
@@ -52,6 +52,10 @@
                 <div class="nl-drawing">
                     <input type="checkbox" id="enable-nl-drawing" />
                     <label for="enable-nl-drawing">启用自然语言绘图</label>
+                </div>
+                <div class="auto-render">
+                    <input type="checkbox" id="enable-auto-render" checked />
+                    <label for="enable-auto-render">启用自动渲染</label>
                 </div>
                 <div class="use-kroki">
                     <input type="checkbox" id="use-kroki" />

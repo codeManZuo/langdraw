@@ -318,7 +318,6 @@ input[type="checkbox"] {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background-color: #455a64;
     padding: 0.4rem 0.8rem;
     border-radius: 4px;
 }
@@ -557,4 +556,25 @@ input[type="checkbox"] {
 
 .panel-header span:hover::after {
     transform: scaleX(1);
+}
+
+/* 工具栏选项样式 */
+.nl-drawing, .use-kroki, .auto-render {
+    margin-right: 15px;
+    display: flex;
+    align-items: center;
+}
+
+.nl-drawing input, .use-kroki input, .auto-render input {
+    margin-right: 5px;
+}
+
+/* 禁用状态的选项样式 */
+.auto-render[disabled], .auto-render input[disabled] + label {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.auto-render input[disabled] {
+    cursor: not-allowed;
 } 

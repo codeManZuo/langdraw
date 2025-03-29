@@ -10,7 +10,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let streamRenderInterval = null;     // 流式渲染定时器
     let settings = {                     // 设置对象
         openrouterKey: localStorage.getItem('openrouterKey') || '',
-        enableNLDrawing: localStorage.getItem('enableNLDrawing') === 'true'
+        enableNLDrawing: localStorage.getItem('enableNLDrawing') === 'true',
+        autoRender: localStorage.getItem('autoRender') !== 'false' // 默认开启自动渲染
     };
     let isProcessingNLDrawing = false;   // 添加标志变量
     let lastGeneratedCode = null;        // 存储最后一次生成的代码
@@ -66,6 +67,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 设置初始UI状态
     document.getElementById('enable-nl-drawing').checked = settings.enableNLDrawing;
+    document.getElementById('enable-auto-render').checked = settings.autoRender;
     updateEditorsState();
     
     // 页面加载完成后，移除初始加载标记
@@ -107,8 +109,12 @@ document.addEventListener('DOMContentLoaded', function() {
         diagramEditor.on('change', function(cm, change) {
             // 仅当用户手动输入（非程序设置值）时进行实时渲染
             if (change.origin !== 'setValue' && change.origin !== 'undo' && change.origin !== 'redo') {
-                // 实时渲染预览
-                renderDiagram(false);
+                // 判断是否启用了自动渲染且未启用自然语言绘图
+                const shouldAutoRender = settings.autoRender && !settings.enableNLDrawing;
+                if (shouldAutoRender) {
+                    // 实时渲染预览
+                    renderDiagram(false);
+                }
             }
         });
         
@@ -225,9 +231,42 @@ document.addEventListener('DOMContentLoaded', function() {
             // 更新编辑器状态
             updateEditorsState();
             
+            // 如果启用自然语言绘图，禁用自动渲染
+            if (isEnabled) {
+                // 自动渲染在自然语言绘图模式下禁用
+                document.getElementById('enable-auto-render').disabled = true;
+            } else {
+                // 关闭自然语言绘图时，重新启用自动渲染选项
+                document.getElementById('enable-auto-render').disabled = false;
+                
+                // 如果自动渲染是开启的，触发一次渲染
+                if (settings.autoRender) {
+                    renderDiagram(false);
+                }
+            }
+            
             // 如果启用，自动切换到自然语言编辑器
             if (isEnabled && currentEditor === 'diagram') {
                 toggleEditor();
+            }
+        });
+    }
+
+    /**
+     * 监听自动渲染开关
+     */
+    function setupAutoRenderListeners() {
+        document.getElementById('enable-auto-render').addEventListener('change', function(e) {
+            // 如果是初始加载，忽略事件处理
+            if (isInitialLoad) return;
+            
+            const isEnabled = e.target.checked;
+            settings.autoRender = isEnabled;
+            localStorage.setItem('autoRender', isEnabled);
+            
+            // 如果开启了自动渲染，且当前不是自然语言绘图模式，立即触发一次渲染
+            if (isEnabled && !settings.enableNLDrawing) {
+                renderDiagram(false);
             }
         });
     }
@@ -271,6 +310,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 添加自然语言绘图开关监听
         setupNLDrawingListeners();
+        
+        // 添加自动渲染开关监听
+        setupAutoRenderListeners();
 
         // 添加快捷键监听
         document.addEventListener('keydown', function(e) {
@@ -354,8 +396,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const diagramWrapper = diagramEditor.getWrapperElement();
         if (isNLDrawingEnabled) {
             diagramWrapper.classList.add('readonly');
+            
+            // 如果开启了自然语言绘图，自动渲染选项应当被禁用
+            document.getElementById('enable-auto-render').disabled = true;
         } else {
             diagramWrapper.classList.remove('readonly');
+            
+            // 如果关闭了自然语言绘图，自动渲染选项应当被启用
+            document.getElementById('enable-auto-render').disabled = false;
         }
     }
 
