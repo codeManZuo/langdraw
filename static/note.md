@@ -20,6 +20,7 @@
   2. 通过快捷键（Mac: Command+S, Windows: Ctrl+S）触发保存和渲染
   3. 渲染时显示 toast 提示，告知用户保存和渲染状态
   4. 关闭 Kroki 渲染时保持原有的实时渲染行为
+- **提示词**：为应用添加保存快捷键功能（Ctrl+S/Cmd+S），优化Kroki渲染的触发机制，添加Toast提示，只在用户主动保存时才触发Kroki渲染
 
 #### 1.2 验收标准
 1. 开启 Kroki 渲染时：
@@ -57,6 +58,7 @@
      - 提供"确认关闭"和"知道了"两个选项
      - "确认关闭"会关闭自然语言绘图模式
      - "知道了"保持当前状态不变
+- **提示词**：修改index.html文件，添加自然语言绘图选项和保存按钮到工具栏，实现双编辑器支持，在自然语言绘图模式下锁定图表编辑器，流式更新绘图文本编辑器内容
 
 #### 2.2 验收标准
 1. 工具栏改动：
@@ -89,6 +91,7 @@
      - 修复初次加载页面时设置框自动弹出的问题
      - 修复自然语言绘图模式下自动弹出提示对话框的问题
      - 确保对话框只在用户明确操作时弹出
+- **提示词**：CSS中的:contains()选择器不是标准选择器，可能不被所有浏览器支持，请修改为使用类名选择器，并优化编辑器标题显示和模态框行为
 
 #### 3.2 验收标准
 1. 编辑器标识：
@@ -685,6 +688,7 @@ function renderDiagram(forceRender = false) {
      - 统一处理API请求过程中可能出现的各类错误
      - 针对不同错误类型提供友好的提示信息
      - 包含HTTP错误、解析错误和其他异常情况的处理
+- **提示词**：优化自然语言绘图功能，如果用户没有输入内容就提示检查绘图文本，如果API返回错误则显示保存失败的提示，需要进行错误处理优化
 
 #### 4.2 验收标准
 1. 空内容处理：
@@ -823,6 +827,7 @@ async function handleSave() {
   2. 显示时间统一：
      - 将所有 Toast 提示的默认显示时间统一为 3 秒
      - 确保用户有足够时间阅读提示内容
+- **提示词**：toast提示目前在web页面右下角，不明显，需要改到正中间，并且停留时间统一为3s
 
 #### 5.2 验收标准
 1. 位置要求：
@@ -910,6 +915,7 @@ function showToast(message, duration = 3000) {
   3. 功能逻辑：
      - 启用自动渲染：编辑内容时自动更新预览
      - 禁用自动渲染：仅在用户点击保存按钮或使用保存快捷键时才更新预览
+- **提示词**：你需要给工具栏加一个勾选，表示是否开启自动渲染，并且这个自动渲染只在用户没有开启自然语言绘图的时候才生效，如果用户开启了自动渲染，并且没有开启自然语言绘图的模式，那么用户在图标编辑器中编辑的时候，会自动进行渲染，如果用户没有开启自动渲染那么就只有用户手动保存的时候才会渲染
 
 #### 6.2 验收标准
 1. 界面要求：
@@ -1034,27 +1040,28 @@ function updateEditorsState() {
 ### 7. 图表编辑器锁定提示优化
 
 #### 7.1 需求描述
-- **问题背景**：在启用自然语言绘图模式后，尝试修改图表编辑器内容时没有正确显示编辑器已锁定的提示对话框
-- **目标**：优化用户体验，为用户提供明确的反馈
+- **问题背景**：在启用自然语言绘图模式后，图表编辑器锁定的提示方式需要更加简洁明了
+- **目标**：优化用户体验，提供直观的视觉反馈和简单的提示信息
 - **具体需求**：
-  1. 交互优化：
-     - 在自然语言绘图模式下，当用户点击图表编辑器时，显示编辑器已锁定的提示对话框
-     - 对话框应提供两个选项：关闭自然语言绘图模式或取消操作
-  2. 体验改进：
-     - 确保对话框只在用户主动点击编辑器时出现
-     - 确保同一时间只显示一个对话框，避免重复弹出
-     - 确保对话框能正确关闭
+  1. 提示优化：
+     - 当用户在自然语言绘图模式下点击图表编辑器时，显示简洁的 toast 提示，而非模态对话框
+     - 提示信息应明确指出当前状态和解决方法
+  2. 视觉反馈：
+     - 锁定状态下，鼠标悬停在编辑器上时显示"禁止"图标
+     - 编辑器背景应有轻微的视觉区分，表明其处于只读状态
+  3. 状态提示：
+     - 在切换自然语言绘图模式时，提供 toast 提示，告知用户编辑器状态的变化
+- **提示词**：再修改一下吧，不需要监听用户输入了，当用户点击的时候，就弹出toast，展示图表编辑器已锁定，请先退出自然语言模式再编辑。并且用户的鼠标在编辑器上的时候，要是要带上禁止的icon的鼠标样式
 
 #### 7.2 验收标准
-1. 功能要求：
-   - 在自然语言绘图模式下点击图表编辑器时，应弹出提示对话框
-   - 对话框应包含解释文字和两个按钮（关闭自然语言绘图模式和取消）
-   - 点击关闭自然语言绘图按钮，应关闭自然语言绘图模式并更新编辑器状态
-   - 点击取消按钮或对话框外部，应仅关闭对话框
-2. 技术要求：
-   - 避免重复添加事件监听器
-   - 确保对话框在所有情况下都能正确显示和关闭
-   - 同一时间只允许存在一个提示对话框
+1. 提示功能：
+   - 在自然语言绘图模式下点击图表编辑器时，显示 toast 提示
+   - 提示内容应清晰表明编辑器已锁定，并提示如何解锁
+   - 切换模式时提供状态变化提示
+2. 视觉设计：
+   - 编辑器在锁定状态下应有明显的鼠标样式变化（禁止图标）
+   - 编辑器背景应有轻微的视觉差异，但不影响内容阅读
+   - 内容仍可选择和复制
 
 #### 7.3 实现方案
 ```javascript
@@ -1075,11 +1082,11 @@ function updateEditorsState() {
         // 如果开启了自然语言绘图，自动渲染选项应当被禁用
         document.getElementById('enable-auto-render').disabled = true;
         
-        // 添加点击事件监听器，当用户点击编辑器时显示提示
+        // 添加点击事件监听器
         if (!diagramWrapper.hasAttribute('data-has-click-listener')) {
             diagramWrapper.addEventListener('click', function(e) {
                 if (document.getElementById('enable-nl-drawing').checked) {
-                    showReadOnlyDialog();
+                    showToast('图表编辑器已锁定，请先退出自然语言模式再编辑', 3000);
                 }
             });
             // 设置标记，避免重复添加事件监听器
@@ -1094,73 +1101,74 @@ function updateEditorsState() {
 }
 
 /**
- * 显示只读提示对话框
+ * 监听自然语言绘图开关
  */
-function showReadOnlyDialog() {
-    // 检查是否已有对话框显示
-    const existingDialog = document.querySelector('.modal.read-only-dialog');
-    if (existingDialog) {
-        return; // 如果已有对话框显示，不再显示新的
-    }
-    
-    const { title, content, confirmText, cancelText } = config.editor.readOnlyMessage;
-    
-    const dialog = document.createElement('div');
-    dialog.className = 'modal read-only-dialog show'; // 直接添加 show 类
-    dialog.innerHTML = `
-        <div class="modal-content">
-            <h3>${title}</h3>
-            <p>${content}</p>
-            <div class="modal-footer">
-                <button class="confirm">${confirmText}</button>
-                <button class="cancel">${cancelText}</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(dialog);
-    
-    // 点击确认按钮，关闭自然语言绘图模式
-    dialog.querySelector('.confirm').addEventListener('click', () => {
-        document.getElementById('enable-nl-drawing').checked = false;
-        settings.enableNLDrawing = false;
-        localStorage.setItem('enableNLDrawing', 'false');
-        dialog.remove();
+function setupNLDrawingListeners() {
+    document.getElementById('enable-nl-drawing').addEventListener('change', function(e) {
+        // ... 其他代码 ...
         
-        // 更新编辑器状态
-        updateEditorsState();
-    });
-    
-    // 点击取消按钮，仅关闭对话框
-    dialog.querySelector('.cancel').addEventListener('click', () => {
-        dialog.remove();
-    });
-    
-    // 点击对话框外部关闭
-    dialog.addEventListener('click', function(e) {
-        if (e.target === dialog) {
-            dialog.remove();
+        // 如果启用自然语言绘图，禁用自动渲染
+        if (isEnabled) {
+            // 自动渲染在自然语言绘图模式下禁用
+            document.getElementById('enable-auto-render').disabled = true;
+            
+            // 显示提示信息
+            showToast('已启用自然语言绘图模式，图表编辑器已锁定', 3000);
+        } else {
+            // 关闭自然语言绘图时，重新启用自动渲染选项
+            document.getElementById('enable-auto-render').disabled = false;
+            
+            // 如果自动渲染是开启的，触发一次渲染
+            if (settings.autoRender) {
+                renderDiagram(false);
+            }
+            
+            // 显示提示信息
+            showToast('已退出自然语言绘图模式，图表编辑器已解锁', 3000);
         }
+        
+        // ... 其他代码 ...
     });
 }
 ```
 
+```css
+/* 只读模式的编辑器样式 */
+.readonly, .readonly .CodeMirror {
+    background-color: rgba(200, 200, 200, 0.1) !important;
+    cursor: not-allowed !important;
+}
+
+.readonly .CodeMirror-lines, 
+.readonly .CodeMirror-line, 
+.readonly .CodeMirror-cursor {
+    cursor: not-allowed !important;
+}
+
+/* 只读模式下可以选择和复制内容 */
+.readonly .CodeMirror-selected {
+    background-color: rgba(75, 135, 255, 0.3) !important;
+}
+```
+
 #### 7.4 关键设计说明
-1. **事件监听优化**
-   - 使用 `data-has-click-listener` 属性标记，避免重复添加事件监听器
-   - 只在自然语言绘图模式开启时添加点击事件监听器
+1. **简化提示机制**
+   - 使用 toast 消息代替模态对话框，减少干扰
+   - 提示信息简洁明了，直接指出问题和解决方案
+   - 在用户切换模式时提供状态变化的反馈
 
-2. **对话框管理**
-   - 在显示对话框前，先检查是否已有对话框显示，避免重复弹出
-   - 直接在创建对话框时添加 `show` 类，确保对话框立即显示
-   - 添加点击对话框外部关闭的功能，提升用户体验
+2. **直观的视觉反馈**
+   - 使用 CSS `cursor: not-allowed` 在鼠标悬停时显示禁止图标
+   - 通过轻微的背景色变化提示编辑器状态
+   - 确保可读性和可选择性，方便用户复制内容
 
-3. **状态管理**
-   - 当用户选择关闭自然语言绘图模式时，更新编辑器状态，确保状态一致性
-   - 使用 localStorage 保存设置，确保刷新页面后保持用户的设置
+3. **事件处理优化**
+   - 使用点击事件替代 `beforeChange` 事件，简化实现
+   - 通过数据属性标记防止重复添加事件监听器
+   - 在自然语言绘图模式切换时提供即时反馈
 
 #### 7.5 注意事项
-1. 确保对话框的 z-index 足够高，以避免被其他元素遮挡
-2. 考虑对话框的响应式设计，确保在不同屏幕尺寸下显示正常
-3. 测试在快速多次点击的情况下对话框的行为是否正常
-4. 确保按钮文本清晰易懂，明确表示操作的后果
+1. 确保 toast 提示在所有浏览器中都正常显示
+2. 视觉反馈应足够明显但不影响内容阅读
+3. 确保用户可以在只读模式下选择和复制内容
+4. 测试模式切换时提示和样式的同步变化

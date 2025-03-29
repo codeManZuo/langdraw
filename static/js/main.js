@@ -126,70 +126,8 @@ document.addEventListener('DOMContentLoaded', function() {
      * 设置编辑器权限控制
      */
     function setupEditorPermissions() {
-        diagramEditor.on('beforeChange', function(cm, change) {
-            // 如果是初始加载或通过程序设置值，不显示对话框
-            if (isInitialLoad || change.origin === 'setValue') {
-                return true;
-            }
-            
-            // 只有当启用了自然语言绘图并有API密钥时才显示对话框
-            if (document.getElementById('enable-nl-drawing').checked && settings.openrouterKey) {
-                showReadOnlyDialog();
-                return false; // 阻止编辑
-            }
-            return true;
-        });
-    }
-
-    /**
-     * 显示只读提示对话框
-     */
-    function showReadOnlyDialog() {
-        // 检查是否已有对话框显示
-        const existingDialog = document.querySelector('.modal.read-only-dialog');
-        if (existingDialog) {
-            return; // 如果已有对话框显示，不再显示新的
-        }
-        
-        const { title, content, confirmText, cancelText } = config.editor.readOnlyMessage;
-        
-        const dialog = document.createElement('div');
-        dialog.className = 'modal read-only-dialog show'; // 直接添加 show 类
-        dialog.innerHTML = `
-            <div class="modal-content">
-                <h3>${title}</h3>
-                <p>${content}</p>
-                <div class="modal-footer">
-                    <button class="confirm">${confirmText}</button>
-                    <button class="cancel">${cancelText}</button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(dialog);
-        
-        // 点击确认按钮，关闭自然语言绘图模式
-        dialog.querySelector('.confirm').addEventListener('click', () => {
-            document.getElementById('enable-nl-drawing').checked = false;
-            settings.enableNLDrawing = false;
-            localStorage.setItem('enableNLDrawing', 'false');
-            dialog.remove();
-            
-            // 更新编辑器状态
-            updateEditorsState();
-        });
-        
-        // 点击取消按钮，仅关闭对话框
-        dialog.querySelector('.cancel').addEventListener('click', () => {
-            dialog.remove();
-        });
-        
-        // 点击对话框外部关闭
-        dialog.addEventListener('click', function(e) {
-            if (e.target === dialog) {
-                dialog.remove();
-            }
-        });
+        // 仅设置编辑器为只读，不再监听 beforeChange 事件
+        // 在 updateEditorsState 中已经添加了点击监听器
     }
 
     /**
@@ -239,6 +177,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (isEnabled) {
                 // 自动渲染在自然语言绘图模式下禁用
                 document.getElementById('enable-auto-render').disabled = true;
+                
+                // 显示提示信息
+                showToast('已启用自然语言绘图模式，图表编辑器已锁定', 3000);
             } else {
                 // 关闭自然语言绘图时，重新启用自动渲染选项
                 document.getElementById('enable-auto-render').disabled = false;
@@ -247,6 +188,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (settings.autoRender) {
                     renderDiagram(false);
                 }
+                
+                // 显示提示信息
+                showToast('已退出自然语言绘图模式，图表编辑器已解锁', 3000);
             }
             
             // 如果启用，自动切换到自然语言编辑器
@@ -404,11 +348,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // 如果开启了自然语言绘图，自动渲染选项应当被禁用
             document.getElementById('enable-auto-render').disabled = true;
             
-            // 添加点击事件监听器，当用户点击编辑器时显示提示
+            // 添加点击事件监听器
             if (!diagramWrapper.hasAttribute('data-has-click-listener')) {
                 diagramWrapper.addEventListener('click', function(e) {
                     if (document.getElementById('enable-nl-drawing').checked) {
-                        showReadOnlyDialog();
+                        showToast('图表编辑器已锁定，请先退出自然语言模式再编辑', 3000);
                     }
                 });
                 // 设置标记，避免重复添加事件监听器

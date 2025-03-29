@@ -577,4 +577,21 @@ input[type="checkbox"] {
 
 .auto-render input[disabled] {
     cursor: not-allowed;
+}
+
+/* 只读模式的编辑器样式 */
+.readonly, .readonly .CodeMirror {
+    background-color: rgba(200, 200, 200, 0.1) !important;
+    cursor: not-allowed !important;
+}
+
+.readonly .CodeMirror-lines, 
+.readonly .CodeMirror-line, 
+.readonly .CodeMirror-cursor {
+    cursor: not-allowed !important;
+}
+
+/* 只读模式下可以选择和复制内容 */
+.readonly .CodeMirror-selected {
+    background-color: rgba(75, 135, 255, 0.3) !important;
 } 
