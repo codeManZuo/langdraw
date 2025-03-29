@@ -8,6 +8,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let nlEditor;                        // 自然语言编辑器实例
     let renderTimeout = null;            // 渲染延时器
     let streamRenderInterval = null;     // 流式渲染定时器
+    let currentAbortController = null;   // 请求中止控制器
+    let isProcessingRequest = false;     // 是否正在处理请求
+    let pendingSaveData = null;          // 待处理的保存内容
     
     // 从localStorage获取设置或使用默认值
     const savedEnableNLDrawing = localStorage.getItem('enableNLDrawing');
@@ -251,7 +254,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('enable-auto-render').disabled = true;
                 
                 // 显示提示信息
-                showToast('已启用自然语言绘图模式，图表编辑器已锁定', 3000);
+                showToast('已启用自然语言绘图模式，图表源码已锁定', 3000);
                 
                 // 如果当前是图表编辑器，自动切换到自然语言编辑器
                 if (currentEditor === 'diagram') {
@@ -267,7 +270,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 // 显示提示信息
-                showToast('已退出自然语言绘图模式，图表编辑器已解锁', 3000);
+                showToast('已退出自然语言绘图模式，图表源码已解锁', 3000);
             }
         });
     }
@@ -368,7 +371,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!diagramWrapper.hasAttribute('data-has-click-listener')) {
                 diagramWrapper.addEventListener('click', function(e) {
                     if (document.getElementById('enable-nl-drawing').checked) {
-                        showToast('图表编辑器已锁定，请先退出自然语言模式再编辑', 3000);
+                        showToast('图表源码已锁定，请先退出自然语言模式再编辑', 3000);
                     }
                 });
                 // 设置标记，避免重复添加事件监听器
@@ -406,29 +409,81 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
+            const saveData = {
+                api_key: settings.openrouterKey,
+                user_context: nlContent,
+                draw_tool_name: currentDiagramType,
+                draw_type: document.getElementById('template-select').value || '流程图'
+            };
+            
+            // 如果正在处理请求，缓存新的内容并返回
+            if (isProcessingRequest) {
+                pendingSaveData = saveData;
+                showToast('已缓存最新内容，将在当前处理完成后自动执行', 3000);
+                return;
+            }
+            
+            // 标记开始处理请求
+            isProcessingRequest = true;
+            
             try {
-                // 调用大语言模型API
-                const response = await fetch('/api/nl-draw', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        api_key: settings.openrouterKey,
-                        user_context: nlContent,
-                        draw_tool_name: currentDiagramType,
-                        draw_type: document.getElementById('template-select').value || '流程图'
-                    })
-                });
+                // 处理当前请求
+                await processNLDrawingRequest(saveData);
+            } finally {
+                // 请求处理完成后
+                isProcessingRequest = false;
                 
-                if (!response.ok) {
-                    throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+                // 检查是否有待处理的内容
+                if (pendingSaveData) {
+                    const nextData = pendingSaveData;
+                    pendingSaveData = null; // 清空待处理内容
+                    showToast('开始处理缓存的保存请求...');
+                    
+                    // 递归调用自身来处理待处理的内容
+                    // 由于已经清空了pendingSaveData，这不会导致无限递归
+                    handleSave();
                 }
-                
-                // 处理流式响应
-                const reader = response.body.getReader();
-                let accumulatedCode = '';
-                
+            }
+        } else {
+            // 直接渲染当前编辑器内容
+            renderDiagram(true);
+            showToast('保存成功');
+        }
+    }
+
+    /**
+     * 处理自然语言绘图请求
+     */
+    async function processNLDrawingRequest(data) {
+        // 中止当前正在进行的请求（如果有）
+        if (currentAbortController) {
+            currentAbortController.abort();
+            currentAbortController = null;
+        }
+
+        // 创建新的AbortController
+        currentAbortController = new AbortController();
+
+        try {
+            // 调用大语言模型API
+            const response = await fetch('/api/nl-draw', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data),
+                signal: currentAbortController.signal
+            });
+            
+            if (!response.ok) {
+                throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+            }
+            
+            // 处理流式响应
+            const reader = response.body.getReader();
+            let accumulatedCode = '';
+            
+            try {
                 while (true) {
                     const {value, done} = await reader.read();
                     if (done) break;
@@ -462,13 +517,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
             } catch (error) {
-                console.error('自然语言绘图错误:', error);
-                showToast('保存失败，请稍后再试: ' + error.message, 3000);
+                if (error.name === 'AbortError') {
+                    console.log('请求被中止，准备处理新的请求');
+                    return;
+                }
+                throw error;
             }
-        } else {
-            // 直接渲染当前编辑器内容
-            renderDiagram(true);
-            showToast('保存成功');
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                console.log('请求被中止，准备处理新的请求');
+                return;
+            }
+            console.error('自然语言绘图错误:', error);
+            showToast('保存失败，请稍后再试: ' + error.message, 3000);
+        } finally {
+            // 清理当前的AbortController
+            if (currentAbortController) {
+                currentAbortController = null;
+            }
         }
     }
 
@@ -635,7 +701,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // 加载保存的设置到设置弹窗中，但不显示弹窗
         openrouterKeyInput.value = settings.openrouterKey;
         enableNLDrawingCheckbox.checked = settings.enableNLDrawing;
-        
+
         // 触发设置框的功能 - 只有用户点击按钮时才显示
         settingsBtn.onclick = function() {
             // 更新设置弹窗内容（确保反映最新状态）
