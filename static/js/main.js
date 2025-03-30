@@ -198,6 +198,45 @@ document.addEventListener('DOMContentLoaded', function() {
         if (tab) {
             tab.click();
         }
+        
+        // 如果切换到自然语言编辑器，显示提示词
+        if (editorType === 'nl' && nlEditor) {
+            const templateType = 'nl_drawing';
+            const templateName = 'default';
+            const templates = settings.promptTemplates?.[templateType] || {};
+            let promptTemplate = templates[templateName];
+            
+            if (!promptTemplate) {
+                promptTemplate = settings.promptTemplates?.['nl_drawing']?.['default'];
+            }
+            
+            if (promptTemplate) {
+                // 获取系统提示词
+                const systemPrompt = promptTemplate
+                    .replace('{user_context}', '')
+                    .replace('{draw_tool_name}', currentDiagramType)
+                    .replace('{draw_type}', getDrawType(currentDiagramType));
+                
+                // 先清除编辑器内容和所有样式
+                nlEditor.setValue('');
+                const totalLines = nlEditor.lineCount();
+                for (let i = 0; i < totalLines; i++) {
+                    nlEditor.removeLineClass(i, 'wrap', 'system-prompt-line');
+                }
+                
+                // 添加系统提示词并应用样式
+                nlEditor.setValue(systemPrompt);
+                
+                // 为所有行添加样式
+                const lines = systemPrompt.split('\n').length;
+                for (let i = 0; i < lines; i++) {
+                    nlEditor.addLineClass(i, 'wrap', 'system-prompt-line');
+                }
+                
+                // 将光标移动到开头
+                nlEditor.setCursor(0, 0);
+            }
+        }
     }
 
     /**
@@ -472,9 +511,13 @@ document.addEventListener('DOMContentLoaded', function() {
         currentAbortController = new AbortController();
 
         try {
+            // 获取用户输入内容（去除系统提示词部分）
+            const content = nlEditor.getValue();
+            const userContent = content.split('\n\n')[0] || content;  // 获取第一部分作为用户输入
+
             // 获取完整提示词
             const fullPrompt = getFullPrompt(
-                data.user_context,
+                userContent.trim(),  // 使用处理后的用户输入
                 data.draw_tool_name,
                 data.draw_type
             );
@@ -487,7 +530,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 body: JSON.stringify({
                     api_key: data.api_key,
-                    prompt: fullPrompt  // 使用拼接后的完整提示词
+                    prompt: fullPrompt
                 }),
                 signal: currentAbortController.signal
             });
@@ -821,9 +864,7 @@ document.addEventListener('DOMContentLoaded', function() {
      * 初始化应用
      */
     async function init() {
-        // 加载提示词模板
         await loadPromptTemplates();
-        
         // 设置初始UI状态
         document.getElementById('enable-nl-drawing').checked = settings.enableNLDrawing;
         document.getElementById('enable-auto-render').checked = settings.autoRender;
@@ -834,7 +875,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 如果启用了自然语言绘图，自动切换到自然语言编辑器
         if (settings.enableNLDrawing) {
-            // 延迟切换以确保UI元素已加载完成
             setTimeout(() => {
                 switchToEditor('nl');
             }, 200);
@@ -1091,7 +1131,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             settings.promptTemplates = await response.json();
             console.log('提示词模板加载成功:', settings.promptTemplates);
-        } catch (error) {
+            } catch (error) {
             console.error('加载提示词模板失败:', error);
             // 使用默认模板作为备份
             settings.promptTemplates = {
@@ -1133,36 +1173,43 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 修改调用LLM的函数
-    async function callLLM(nlContent) {
-        try {
-            if (!settings.openrouterKey) {
-                showError('请先在设置中配置OpenRouter API Key');
-                return;
-            }
-
-            // 获取完整提示词
-            const fullPrompt = getFullPrompt(
-                nlContent,
-                currentDiagramType,
-                getDrawType(currentDiagramType)
-            );
-
-            const response = await fetch('/api/nl-draw', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    api_key: settings.openrouterKey,
-                    prompt: fullPrompt  // 直接发送完整提示词
-                })
-            });
-
-            // ... existing code ...
-        } catch (error) {
-            console.error('调用LLM出错:', error);
-            showError('调用LLM失败: ' + error.message);
+    // 获取当前绘图类型
+    function getDrawType(diagramType) {
+        // 从模板选择器获取当前选择的绘图类型
+        const templateSelect = document.getElementById('template-select');
+        const selectedType = templateSelect.value;
+        
+        // 如果有选择模板，使用模板名称作为绘图类型
+        if (selectedType) {
+            return selectedType;
         }
+        
+        // 否则根据图表类型返回默认的绘图类型
+        const defaultTypes = {
+            'mermaid': '流程图',
+            'plantuml': '时序图',
+            'seqdiag': '时序图',
+            'actdiag': '活动图',
+            'bpmn': '业务流程图',
+            'excalidraw': '架构图',
+            'bytefield': '字节图',
+            'nomnoml': '类图',
+            'erd': '实体关系图',
+            'ditaa': '示意图'
+        };
+        
+        return defaultTypes[diagramType] || '流程图';
     }
+
+    // 添加提示词样式到CSS
+    const style = document.createElement('style');
+    style.textContent = `
+    .system-prompt-line {
+        opacity: 0.6;
+        background-color: rgba(129, 199, 132, 0.1);
+        border-left: 3px solid #81c784;
+        font-style: italic;
+    }
+    `;
+    document.head.appendChild(style);
 }); 
