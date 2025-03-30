@@ -144,4 +144,4 @@ def natural_language_draw():
 #         return jsonify({'error': f'重新加载提示词模板失败: {str(e)}'}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5200) 
+    app.run(debug=True, host='0.0.0.0', port=3002) 

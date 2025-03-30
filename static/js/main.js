@@ -213,7 +213,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 获取当前图表类型和模板类型
         const diagramType = currentDiagramType;
-        const templateType = document.getElementById('template-select').value || '流程图';
+        const templateSelect = document.getElementById('template-select');
+        const templateType = templateSelect.value || templateSelect.options[1]?.value || '流程图';
         
         // 从提示词模板中获取对应的提示词
         const promptTemplate = settings.promptTemplates[diagramType]?.[templateType];
@@ -288,37 +289,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 nlEditor.setCursor(0, 0);
             } else {
                 nlEditor.setCursor(0, 0);
-            }
-            
-            // 添加编辑器内容变化事件处理
-            if (!nlEditor.hasHandler) {
-                nlEditor.on('change', function(cm, change) {
-                    // 获取当前内容的所有行
-                    const lines = cm.getValue().split('\n');
-                    let promptStartIndex = -1;
-                    
-                    // 找到系统提示词开始的位置
-                    for (let i = 0; i < lines.length; i++) {
-                        if (lines[i].includes('请你基于以上信息')) {
-                            promptStartIndex = i;
-                            break;
-                        }
-                    }
-                    
-                    // 如果找到了系统提示词的起始位置
-                    if (promptStartIndex !== -1) {
-                        // 先移除所有行的样式
-                        for (let i = 0; i < cm.lineCount(); i++) {
-                            cm.removeLineClass(i, 'wrap', 'system-prompt-line');
-                        }
-                        
-                        // 为系统提示词部分的所有行添加样式
-                        for (let i = promptStartIndex; i < lines.length; i++) {
-                            cm.addLineClass(i, 'wrap', 'system-prompt-line');
-                        }
-                    }
-                });
-                nlEditor.hasHandler = true;
             }
         }
     }
@@ -965,6 +935,7 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     async function init() {
         await loadPromptTemplates();
+        
         // 设置初始UI状态
         document.getElementById('enable-nl-drawing').checked = settings.enableNLDrawing;
         document.getElementById('enable-auto-render').checked = settings.autoRender;
@@ -973,10 +944,15 @@ document.addEventListener('DOMContentLoaded', function() {
         // 初始化渲染
         renderDiagram(true);
         
-        // 如果启用了自然语言绘图，自动切换到自然语言编辑器
+        // 如果启用了自然语言绘图，自动切换到自然语言编辑器并显示默认提示词
         if (settings.enableNLDrawing) {
             setTimeout(() => {
                 switchToEditor('nl');
+            }, 200);
+        } else {
+            // 即使不切换到自然语言编辑器，也要初始化默认提示词
+            setTimeout(() => {
+                updateNLEditorPrompt();
             }, 200);
         }
         
