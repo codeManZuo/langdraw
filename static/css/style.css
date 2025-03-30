@@ -764,4 +764,20 @@ input[type="checkbox"] {
     border-left: 3px solid #81c784;
     background-color: rgba(129, 199, 132, 0.1);
     font-style: italic;
+}
+
+/* 帮助图标样式 */
+.help-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 5px;
+    text-decoration: none;
+    color: #666;
+    font-size: 14px;
+    transition: color 0.3s ease;
+}
+
+.help-icon:hover {
+    color: #2196F3;
 } 

@@ -226,12 +226,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const lines = currentContent.split('\n');
             let userContent = '';
             let hasSystemPrompt = false;
+            let systemPromptStartIndex = -1;
             
-            // 查找用户内容（在系统提示词之前的所有内容）
+            // 查找用户内容和系统提示词的起始位置
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
                 if (line.includes('请你基于以上信息')) {
                     hasSystemPrompt = true;
+                    systemPromptStartIndex = i;
                     break;
                 }
                 if (userContent) {
@@ -286,6 +288,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 nlEditor.setCursor(0, 0);
             } else {
                 nlEditor.setCursor(0, 0);
+            }
+            
+            // 添加编辑器内容变化事件处理
+            if (!nlEditor.hasHandler) {
+                nlEditor.on('change', function(cm, change) {
+                    // 获取当前内容的所有行
+                    const lines = cm.getValue().split('\n');
+                    let promptStartIndex = -1;
+                    
+                    // 找到系统提示词开始的位置
+                    for (let i = 0; i < lines.length; i++) {
+                        if (lines[i].includes('请你基于以上信息')) {
+                            promptStartIndex = i;
+                            break;
+                        }
+                    }
+                    
+                    // 如果找到了系统提示词的起始位置
+                    if (promptStartIndex !== -1) {
+                        // 先移除所有行的样式
+                        for (let i = 0; i < cm.lineCount(); i++) {
+                            cm.removeLineClass(i, 'wrap', 'system-prompt-line');
+                        }
+                        
+                        // 为系统提示词部分的所有行添加样式
+                        for (let i = promptStartIndex; i < lines.length; i++) {
+                            cm.addLineClass(i, 'wrap', 'system-prompt-line');
+                        }
+                    }
+                });
+                nlEditor.hasHandler = true;
             }
         }
     }
