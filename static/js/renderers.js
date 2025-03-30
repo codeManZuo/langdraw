@@ -534,6 +534,21 @@ const DiagramRenderers = {
         scrollContainer.style.right = '0';
         scrollContainer.style.bottom = '0';
         scrollContainer.style.backgroundColor = '#fff';
+        // 隐藏滚动条但保持滚动功能
+        scrollContainer.style.scrollbarWidth = 'none'; // Firefox
+        scrollContainer.style.msOverflowStyle = 'none'; // IE和Edge
+        scrollContainer.style.webkitOverflowScrolling = 'touch'; // 增强移动设备上的滚动
+        
+        // 添加CSS规则来隐藏WebKit浏览器（Chrome、Safari等）的滚动条
+        const styleEl = document.createElement('style');
+        styleEl.textContent = `
+            .scroll-container::-webkit-scrollbar {
+                width: 0 !important;
+                height: 0 !important;
+                display: none;
+            }
+        `;
+        document.head.appendChild(styleEl);
         
         // 创建一个缩放内容包装器
         const zoomContentWrapper = document.createElement('div');
