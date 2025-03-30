@@ -883,13 +883,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 // 桌面设备上调整宽度
                 handleHorizontalResize(clientX);
             }
+            
+            // 始终在每次移动后更新最后位置，确保下次计算是基于最新位置
+            lastClientX = clientX;
+            lastClientY = clientY;
         };
         
         // 处理水平方向的调整（桌面）
         function handleHorizontalResize(clientX) {
             // 计算移动距离
             const deltaX = clientX - lastClientX;
-            lastClientX = clientX;
+            // 不在这里更新lastClientX，而是在handlePointerMove结束时统一更新
             
             // 获取当前预览面板宽度
             const previewWidth = previewPanel.offsetWidth;
@@ -919,7 +923,7 @@ document.addEventListener('DOMContentLoaded', function() {
         function handleVerticalResize(clientY) {
             // 计算移动距离
             const deltaY = clientY - lastClientY;
-            lastClientY = clientY;
+            // 不在这里更新lastClientY，而是在handlePointerMove结束时统一更新
             
             // 获取当前预览面板高度
             const previewHeight = previewPanel.offsetHeight;
