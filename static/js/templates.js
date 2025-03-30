@@ -749,29 +749,72 @@ database "数据库" {
     
     // Bytefield 图表模板
     bytefield: {
-        '协议格式': `(defattrs :bg-color "#f5f5f5")
-(defconst box-width 20)
-(def boxes-per-row 8)
+        '协议格式': `(defattrs :bg-green {:fill "#a0ffa0"})
+(defattrs :bg-yellow {:fill "#ffffa0"})
+(defattrs :bg-pink {:fill "#ffb0a0"})
+(defattrs :bg-cyan {:fill "#a0fafa"})
+(defattrs :bg-purple {:fill "#e4b5f7"})
 
-(draw-box "版本" {:span 1})
-(draw-box "头部长度" {:span 1})
-(draw-box "服务类型" {:span 1})
-(draw-box "总长度" {:span 2})
-(draw-box "标识" {:span 2})
-(draw-box "标志" {:span 1})
-(next-row)
+(defn draw-group-label-header
+  [span label]
+  (draw-box (text label [:math {:font-size 12}]) {:span span :borders #{} :height 14}))
 
-(draw-box "片偏移" {:span 2})
-(draw-box "TTL" {:span 1})
-(draw-box "协议" {:span 1})
-(draw-box "头部校验和" {:span 2})
-(draw-box "源地址" {:span 2})
-(next-row)
+(defn draw-remotedb-header
+  [kind args]
+  (draw-column-headers)
+  (draw-group-label-header 5 "start")
+  (draw-group-label-header 5 "TxID")
+  (draw-group-label-header 3 "type")
+  (draw-group-label-header 2 "args")
+  (draw-group-label-header 1 "tags")
+  (next-row 18)
 
-(draw-box "目标地址" {:span 4})
-(draw-box "选项" {:span 2})
-(draw-box "数据" {:span 2})
-(next-row)`
+  (draw-box 0x11 :bg-green)
+  (draw-box 0x872349ae [{:span 4} :bg-green])
+  (draw-box 0x11 :bg-yellow)
+  (draw-box (text "TxID" :math) [{:span 4} :bg-yellow])
+  (draw-box 0x10 :bg-pink)
+  (draw-box (hex-text kind 4 :bold) [{:span 2} :bg-pink])
+  (draw-box 0x0f :bg-cyan)
+  (draw-box (hex-text args 2 :bold) :bg-cyan)
+  (draw-box 0x14 :bg-purple)
+
+  (draw-box (text "0000000c" :hex [[:plain {:font-weight "light" :font-size 16}] " (12)"]) [{:span 4} :bg-purple])
+  (draw-box (hex-text 6 2 :bold) [:box-first :bg-purple])
+  (doseq [val [6 6 3 6 6 6 6 3]]
+    (draw-box (hex-text val 2 :bold) [:box-related :bg-purple]))
+  (doseq [val [0 0]]
+    (draw-box val [:box-related :bg-purple]))
+  (draw-box 0 [:box-last :bg-purple]))
+
+(draw-remotedb-header 0x4702 9)
+
+(draw-box 0x11)
+(draw-box 0x2104 {:span 4})
+(draw-box 0x11)
+(draw-box 0 {:span 4})
+(draw-box 0x11)
+(draw-box (text "length" [:math] [:sub 1]) {:span 4})
+(draw-box 0x14)
+
+(draw-box (text "length" [:math] [:sub 1]) {:span 4})
+(draw-gap "Cue and loop point bytes")
+
+(draw-box nil :box-below)
+(draw-box 0x11)
+(draw-box 0x36 {:span 4})
+(draw-box 0x11)
+(draw-box (text "num" [:math] [:sub "hot"]) {:span 4})
+(draw-box 0x11)
+(draw-box (text "num" [:math] [:sub "cue"]) {:span 4})
+
+(draw-box 0x11)
+(draw-box (text "length" [:math] [:sub 2]) {:span 4})
+(draw-box 0x14)
+(draw-box (text "length" [:math] [:sub 2]) {:span 4})
+(draw-gap "Unknown bytes" {:min-label-columns 6})
+(draw-bottom)
+`
     },
     
     // Nomnoml 图表模板
@@ -844,28 +887,19 @@ database "数据库" {
     
     // Erd 图表模板
     erd: {
-        '实体关系图': `[用户] {
-  +用户ID
-  用户名
-  密码
-  邮箱
-}
+        '实体关系图': `[Person]
+*name
+height
+weight
++birth_location_id
 
-[订单] {
-  +订单ID
-  日期
-  金额
-}
+[Location]
+*id
+city
+state
+country
 
-[产品] {
-  +产品ID
-  名称
-  价格
-  库存
-}
-
-用户 1--* 订单
-订单 *--* 产品`
+Person *--1 Location`
     },
     
     // Ditaa 图表模板

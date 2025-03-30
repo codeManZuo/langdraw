@@ -72,19 +72,24 @@ const DiagramRenderers = {
             let url = `${config.krokiBaseUrl}/${diagramConfig.krokiType}/svg/`;
             
             // 根据图表类型选择适当的方法
-            if (type === 'excalidraw') {
-                // Excalidraw需要使用特殊的GET请求方式
-                // 对内容进行Base64和URL编码
-                const encodedData = this.encodeExcalidrawData(code);
-                url += encodedData;
-                this.fetchSvgContent(url, container, timestamp, type);
-            } else if (diagramConfig.useEncoder) {
-                // 对于使用编码的图表（如PlantUML）
+            if (type === 'mermaid') {
+                // 对于mermaid，使用原有的方法
+                if (diagramConfig.useEncoder) {
+                    url += diagramData;
+                    this.fetchSvgContent(url, container, timestamp, type);
+                } else {
+                    this.postDiagramContent(url, code, container, type);
+                }
+            } else if (type === 'plantuml') {
+                // 对于plantuml，使用plantumlEncoder编码
                 url += diagramData;
                 this.fetchSvgContent(url, container, timestamp, type);
             } else {
-                // 对于直接发送内容的图表
-                this.postDiagramContent(url, code, container, type);
+                // 所有其他图表类型（包括excalidraw），使用相同的编码和请求方式
+                // 使用deflate + base64编码
+                const encodedData = this.encodeKrokiData(code);
+                url += encodedData;
+                this.fetchSvgContent(url, container, timestamp, type);
             }
         } catch (e) {
             console.error('Kroki渲染错误:', e);
@@ -93,11 +98,11 @@ const DiagramRenderers = {
     },
     
     /**
-     * 编码Excalidraw数据用于GET请求
-     * @param {string} data - Excalidraw JSON数据
+     * 编码Kroki数据用于GET请求（用于所有非plantuml/mermaid图表）
+     * @param {string} data - 图表数据
      * @returns {string} 编码后的字符串
      */
-    encodeExcalidrawData: function(data) {
+    encodeKrokiData: function(data) {
         try {
             // 使用TextEncoder或者兼容方法将字符串编码为UTF-8
             function textEncode(str) {
@@ -132,8 +137,8 @@ const DiagramRenderers = {
                 
             return result;
         } catch (error) {
-            console.error('Excalidraw数据编码错误:', error);
-            throw new Error('Excalidraw数据编码失败: ' + error.message);
+            console.error('Kroki数据编码错误:', error);
+            throw new Error('Kroki数据编码失败: ' + error.message);
         }
     },
     
