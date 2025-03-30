@@ -233,9 +233,11 @@ const DiagramRenderers = {
         svgWrapper.className = `${type}-diagram diagram-container`;
         svgWrapper.style.maxWidth = '100%';
         svgWrapper.style.margin = '0 auto';
+        svgWrapper.style.position = 'relative';
+        svgWrapper.style.overflow = 'hidden';
         
         // 为特定图表类型设置全宽样式
-        if (type === 'seqdiag' || type === 'actdiag') {
+        if (type === 'seqdiag' || type === 'actdiag' || type === 'plantuml') {
             svgWrapper.style.width = '100%';
             svgWrapper.style.minHeight = '400px';
             svgWrapper.style.display = 'flex';
@@ -295,6 +297,37 @@ const DiagramRenderers = {
                 '<svg$1width="100%"$3height="100%"$5');
         }
         
+        // 为PlantUML添加特殊处理
+        if (type === 'plantuml') {
+            // 确保SVG有正确的viewBox
+            if (!processedSvg.includes('viewBox')) {
+                // 提取宽度和高度信息
+                const widthMatch = processedSvg.match(/width="(\d+)"/);
+                const heightMatch = processedSvg.match(/height="(\d+)"/);
+                
+                if (widthMatch && heightMatch) {
+                    const width = parseInt(widthMatch[1]);
+                    const height = parseInt(heightMatch[1]);
+                    processedSvg = processedSvg.replace(/<svg/, `<svg viewBox="0 0 ${width} ${height}"`);
+                } else {
+                    // 默认viewBox
+                    processedSvg = processedSvg.replace(/<svg/, '<svg viewBox="0 0 800 600"');
+                }
+            }
+            
+            // 修改SVG属性以确保它可以正确缩放
+            processedSvg = processedSvg.replace(/<svg([^>]*)width="(\d+)"([^>]*)height="(\d+)"([^>]*)/g, 
+                '<svg$1width="100%"$3height="100%"$5');
+                
+            // 修复字体和文本相关问题
+            processedSvg = processedSvg.replace(/<text([^>]*)>(.*?)<\/text>/g, (match, attrs, content) => {
+                if (!attrs.includes('font-family')) {
+                    return `<text${attrs} font-family="Arial, sans-serif">${content}</text>`;
+                }
+                return match;
+            });
+        }
+        
         // 为BPMN添加特殊处理
         if (type === 'bpmn') {
             // 确保SVG有正确的viewBox
@@ -336,12 +369,15 @@ const DiagramRenderers = {
             // 确保SVG适合容器
             svgElement.style.maxWidth = '100%';
             svgElement.style.height = 'auto';
+            svgElement.style.display = 'block';
             svgElement.setAttribute('preserveAspectRatio', 'xMinYMin meet');
             
-            // 特殊处理SeqDiag和ActDiag
-            if (type === 'seqdiag' || type === 'actdiag') {
+            // 特殊处理需要全宽样式的图表类型
+            if (type === 'seqdiag' || type === 'actdiag' || type === 'plantuml') {
                 svgElement.style.width = '100%';
                 svgElement.style.minHeight = '400px';
+                svgElement.style.height = '100%';
+                
                 // 确保viewBox设置正确
                 if (!svgElement.getAttribute('viewBox')) {
                     const width = svgElement.getAttribute('width') || '800';
@@ -357,7 +393,7 @@ const DiagramRenderers = {
             }
             
             // 对于特定图表类型，修复文字显示问题
-            if (type === 'seqdiag' || type === 'actdiag') {
+            if (type === 'seqdiag' || type === 'actdiag' || type === 'plantuml') {
                 // 修复文本元素的样式
                 const textElements = svgElement.querySelectorAll('text');
                 textElements.forEach(textEl => {
@@ -380,7 +416,7 @@ const DiagramRenderers = {
             this.addZoomControls(container, svgWrapper);
             
             // 为特定图表添加额外的全屏按钮
-            if (type === 'seqdiag' || type === 'actdiag' || type === 'bpmn') {
+            if (type === 'seqdiag' || type === 'actdiag' || type === 'bpmn' || type === 'plantuml') {
                 this.addFullscreenButton(container, svgWrapper);
             }
         }
@@ -469,14 +505,41 @@ const DiagramRenderers = {
         container.appendChild(zoomControls);
         
         // 当前缩放比例
-        let scale = 1;
+        let scale = 0.8;
         const scaleStep = 0.1;
+        
+        // 改进缩放包装器的样式以便更好地支持缩放
+        svgWrapper.style.overflow = 'auto';
+        svgWrapper.style.width = '100%';
+        svgWrapper.style.height = '100%';
+        svgWrapper.style.display = 'flex';
+        svgWrapper.style.justifyContent = 'center';
+        svgWrapper.style.alignItems = 'center';
+        
+        // 创建一个内部容器用于缩放
+        const zoomContainer = document.createElement('div');
+        zoomContainer.className = 'zoom-container';
+        zoomContainer.style.transformOrigin = 'center center';
+        zoomContainer.style.transition = 'transform 0.1s ease-out';
+        zoomContainer.style.width = '100%';
+        zoomContainer.style.height = '100%';
+        zoomContainer.style.display = 'flex';
+        zoomContainer.style.justifyContent = 'center';
+        zoomContainer.style.alignItems = 'center';
+        
+        // 将SVG移动到缩放容器中
+        while (svgWrapper.firstChild) {
+            zoomContainer.appendChild(svgWrapper.firstChild);
+        }
+        svgWrapper.appendChild(zoomContainer);
         
         // 更新缩放
         function updateZoom() {
-            svg.style.transform = `scale(${scale})`;
-            svg.style.transformOrigin = 'top left';
+            zoomContainer.style.transform = `scale(${scale})`;
         }
+        
+        // 初始应用缩放
+        updateZoom();
         
         // 事件监听器
         zoomInBtn.addEventListener('click', function() {
@@ -490,9 +553,24 @@ const DiagramRenderers = {
         });
         
         resetBtn.addEventListener('click', function() {
-            scale = 1;
+            scale = 0.8;
             updateZoom();
         });
+        
+        // 添加鼠标滚轮缩放支持
+        svgWrapper.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                if (e.deltaY < 0) {
+                    // 向上滚动，放大
+                    scale = Math.min(5, scale + scaleStep);
+                } else {
+                    // 向下滚动，缩小
+                    scale = Math.max(0.1, scale - scaleStep);
+                }
+                updateZoom();
+            }
+        }, { passive: false });
     },
     
     /**
