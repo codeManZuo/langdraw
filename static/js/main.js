@@ -843,14 +843,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         let isResizing = false;
-        let lastClientX = 0;
-        let lastClientY = 0;
         
         // 处理鼠标按下事件
         const handlePointerDown = (e) => {
             isResizing = true;
-            lastClientX = e.clientX || e.touches[0].clientX;
-            lastClientY = e.clientY || e.touches[0].clientY;
             resizer.classList.add('active');
             
             // 阻止默认事件防止文本选择等
@@ -873,33 +869,27 @@ document.addEventListener('DOMContentLoaded', function() {
             // 阻止默认事件，如滚动
             e.preventDefault();
             
-            const clientX = e.clientX || e.touches[0].clientX;
-            const clientY = e.clientY || e.touches[0].clientY;
-            
             if (isMobile) {
-                // 移动设备上调整高度
+                // 移动设备上调整高度 - 使用绝对位置
+                const clientY = e.clientY || e.touches[0].clientY;
                 handleVerticalResize(clientY);
             } else {
-                // 桌面设备上调整宽度
+                // 桌面设备上调整宽度 - 使用绝对位置
+                const clientX = e.clientX || e.touches[0].clientX;
                 handleHorizontalResize(clientX);
             }
-            
-            // 始终在每次移动后更新最后位置，确保下次计算是基于最新位置
-            lastClientX = clientX;
-            lastClientY = clientY;
         };
         
-        // 处理水平方向的调整（桌面）
+        // 处理水平方向的调整（桌面）- 使用绝对位置计算
         function handleHorizontalResize(clientX) {
-            // 计算移动距离
-            const deltaX = clientX - lastClientX;
-            // 不在这里更新lastClientX，而是在handlePointerMove结束时统一更新
+            // 计算绝对位置
+            const containerRect = container.getBoundingClientRect();
             
-            // 获取当前预览面板宽度
-            const previewWidth = previewPanel.offsetWidth;
+            // 计算相对于容器的位置
+            let newWidth = clientX - containerRect.left;
             
             // 设置新宽度（确保最小宽度）
-            let newWidth = Math.max(200, previewWidth + deltaX);
+            newWidth = Math.max(200, newWidth);
             
             // 确保不会超出容器宽度减去最小编辑器宽度
             const maxWidth = container.offsetWidth - 200 - resizer.offsetWidth;
@@ -919,17 +909,16 @@ document.addEventListener('DOMContentLoaded', function() {
             window.dispatchEvent(new Event('resize'));
         }
         
-        // 处理垂直方向的调整（移动设备）
+        // 处理垂直方向的调整（移动设备）- 使用绝对位置计算
         function handleVerticalResize(clientY) {
-            // 计算移动距离
-            const deltaY = clientY - lastClientY;
-            // 不在这里更新lastClientY，而是在handlePointerMove结束时统一更新
+            // 计算绝对位置
+            const containerRect = container.getBoundingClientRect();
             
-            // 获取当前预览面板高度
-            const previewHeight = previewPanel.offsetHeight;
+            // 计算相对于容器的位置
+            let newHeight = clientY - containerRect.top;
             
             // 设置新高度（确保最小高度）
-            let newHeight = Math.max(150, previewHeight + deltaY);
+            newHeight = Math.max(150, newHeight);
             
             // 确保不会超出容器高度减去最小编辑器高度
             const maxHeight = container.offsetHeight - 150;
