@@ -780,4 +780,18 @@ input[type="checkbox"] {
 
 .help-icon:hover {
     color: #2196F3;
+}
+
+/* 自然语言绘图复选框禁用状态 */
+.nl-drawing.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.nl-drawing.disabled input[type="checkbox"] {
+    cursor: not-allowed;
+}
+
+.nl-drawing.disabled label {
+    cursor: not-allowed;
 } 

@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 从localStorage获取设置或使用默认值
     const savedEnableNLDrawing = localStorage.getItem('enableNLDrawing');
     let settings = {                     // 设置对象
-        openrouterKey: localStorage.getItem('openrouterKey') || '',
+        openrouterKey: localStorage.getItem('openrouter-key') || '',
         enableNLDrawing: savedEnableNLDrawing !== null ? savedEnableNLDrawing === 'true' : true, // 如果未设置，默认启用
         autoRender: localStorage.getItem('autoRender') !== 'false', // 默认开启自动渲染
         promptTemplates: null,  // 存储提示词模板
@@ -493,7 +493,18 @@ document.addEventListener('DOMContentLoaded', function() {
      * 更新编辑器状态
      */
     function updateEditorsState() {
-        const isNLDrawingEnabled = document.getElementById('enable-nl-drawing').checked;
+        const nlDrawingCheckbox = document.getElementById('enable-nl-drawing');
+        const isNLDrawingEnabled = nlDrawingCheckbox.checked;
+        
+        // 如果没有API Key，禁用复选框并设置为未选中状态
+        if (!settings.openrouterKey) {
+            nlDrawingCheckbox.disabled = true;
+            nlDrawingCheckbox.checked = false;
+            nlDrawingCheckbox.parentElement.classList.add('disabled');
+        } else {
+            nlDrawingCheckbox.disabled = false;
+            nlDrawingCheckbox.parentElement.classList.remove('disabled');
+        }
         
         // 设置绘图文本编辑器的只读状态
         diagramEditor.setOption('readOnly', isNLDrawingEnabled);
@@ -515,11 +526,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 // 设置标记，避免重复添加事件监听器
                 diagramWrapper.setAttribute('data-has-click-listener', 'true');
-            }
-            
-            // 如果已启用自然语言绘图，默认显示自然语言编辑器
-            if (isInitialLoad) {
-                switchToEditor('nl');
             }
         } else {
             diagramWrapper.classList.remove('readonly');
@@ -883,6 +889,13 @@ document.addEventListener('DOMContentLoaded', function() {
         openrouterKeyInput.value = settings.openrouterKey;
         enableNLDrawingCheckbox.checked = settings.enableNLDrawing;
 
+        // 如果没有API Key，禁用自然语言绘图复选框
+        if (!settings.openrouterKey) {
+            enableNLDrawingCheckbox.disabled = true;
+            enableNLDrawingCheckbox.checked = false;
+            enableNLDrawingCheckbox.parentElement.classList.add('disabled');
+        }
+
         // 触发设置框的功能 - 只有用户点击按钮时才显示
         settingsBtn.onclick = function() {
             // 更新设置弹窗内容（确保反映最新状态）
@@ -908,24 +921,26 @@ document.addEventListener('DOMContentLoaded', function() {
             const newKey = openrouterKeyInput.value.trim();
             const newEnableNLDrawing = enableNLDrawingCheckbox.checked;
             
-            // 如果要启用自然语言绘图但没有API密钥，显示提示但仍允许启用
-            if (newEnableNLDrawing && !newKey) {
-                showToast('需要设置API密钥才能使用自然语言绘图功能', 5000);
-                // 仍然保存用户选择的设置
-                settings.enableNLDrawing = newEnableNLDrawing;
-            } else {
-                // 正常保存设置
-                settings.enableNLDrawing = newEnableNLDrawing;
-            }
-            
             // 保存API密钥
             settings.openrouterKey = newKey;
             
+            // 只有在有API Key的情况下才允许启用自然语言绘图
+            if (newKey) {
+                settings.enableNLDrawing = newEnableNLDrawing;
+                enableNLDrawingCheckbox.disabled = false;
+                enableNLDrawingCheckbox.parentElement.classList.remove('disabled');
+            } else {
+                settings.enableNLDrawing = false;
+                enableNLDrawingCheckbox.checked = false;
+                enableNLDrawingCheckbox.disabled = true;
+                enableNLDrawingCheckbox.parentElement.classList.add('disabled');
+            }
+            
             // 更新UI状态
-            document.getElementById('enable-nl-drawing').checked = newEnableNLDrawing;
+            document.getElementById('enable-nl-drawing').checked = settings.enableNLDrawing;
             
             // 保存到localStorage
-            localStorage.setItem('openrouterKey', settings.openrouterKey);
+            localStorage.setItem('openrouter-key', settings.openrouterKey);
             localStorage.setItem('enableNLDrawing', settings.enableNLDrawing);
             
             modal.classList.remove('show');
