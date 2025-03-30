@@ -376,7 +376,7 @@ const DiagramRenderers = {
         container.appendChild(svgWrapper);
         
         // 当图表比较复杂时添加缩放控制
-        if (type === 'seqdiag' || type === 'actdiag' || type === 'bpmn' || type === 'erd') {
+        if (type === 'plantuml' || type === 'mermaid' || type === 'seqdiag' || type === 'actdiag' || type === 'bpmn' || type === 'erd') {
             this.addZoomControls(container, svgWrapper);
             
             // 为特定图表添加额外的全屏按钮
@@ -387,7 +387,7 @@ const DiagramRenderers = {
     },
     
     /**
-     * 为复杂图表添加缩放控制
+     * 为复杂图表添加缩放控制 
      * @param {HTMLElement} container - 主容器
      * @param {HTMLElement} svgWrapper - SVG包装器
      */
