@@ -201,41 +201,58 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 如果切换到自然语言编辑器，显示提示词
         if (editorType === 'nl' && nlEditor) {
-            const templateType = 'nl_drawing';
-            const templateName = 'default';
-            const templates = settings.promptTemplates?.[templateType] || {};
-            let promptTemplate = templates[templateName];
+            updateNLEditorPrompt();
+        }
+    }
+
+    /**
+     * 添加新函数：更新自然语言编辑器的提示词
+     */
+    function updateNLEditorPrompt() {
+        if (!settings.promptTemplates || !nlEditor) return;
+        
+        // 获取当前图表类型和模板类型
+        const diagramType = currentDiagramType;
+        const templateType = document.getElementById('template-select').value || '流程图';
+        
+        // 从提示词模板中获取对应的提示词
+        const promptTemplate = settings.promptTemplates[diagramType]?.[templateType];
+        
+        if (promptTemplate) {
+            // 获取用户当前输入的内容（如果有）
+            const userContent = nlEditor.getValue().trim();
+            const userLines = userContent.split('\n');
             
-            if (!promptTemplate) {
-                promptTemplate = settings.promptTemplates?.['nl_drawing']?.['default'];
+            // 检查是否有空行
+            let hasEmptyLine = userLines.some(line => line.trim() === '');
+            
+            // 先清除编辑器内容和所有样式
+            nlEditor.setValue('');
+            const totalLines = nlEditor.lineCount();
+            for (let i = 0; i < totalLines; i++) {
+                nlEditor.removeLineClass(i, 'wrap', 'system-prompt-line');
             }
             
-            if (promptTemplate) {
-                // 获取系统提示词
-                const systemPrompt = promptTemplate
-                    .replace('{user_context}', '')
-                    .replace('{draw_tool_name}', currentDiagramType)
-                    .replace('{draw_type}', getDrawType(currentDiagramType));
-                
-                // 先清除编辑器内容和所有样式
-                nlEditor.setValue('');
-                const totalLines = nlEditor.lineCount();
-                for (let i = 0; i < totalLines; i++) {
-                    nlEditor.removeLineClass(i, 'wrap', 'system-prompt-line');
-                }
-                
-                // 添加系统提示词并应用样式
-                nlEditor.setValue(systemPrompt);
-                
-                // 为所有行添加样式
-                const lines = systemPrompt.split('\n').length;
-                for (let i = 0; i < lines; i++) {
-                    nlEditor.addLineClass(i, 'wrap', 'system-prompt-line');
-                }
-                
-                // 将光标移动到开头
-                nlEditor.setCursor(0, 0);
+            // 设置新的内容
+            let content = '';
+            if (hasEmptyLine) {
+                // 如果有空行，保留一个空行
+                content = '\n\n' + promptTemplate;
+            } else {
+                content = promptTemplate;
             }
+            nlEditor.setValue(content);
+            
+            // 为所有提示词行添加样式
+            const lines = content.split('\n');
+            for (let i = 0; i < lines.length; i++) {
+                // 如果是空行，跳过
+                if (lines[i].trim() === '') continue;
+                nlEditor.addLineClass(i, 'wrap', 'system-prompt-line');
+            }
+            
+            // 将光标移动到开头
+            nlEditor.setCursor(0, 0);
         }
     }
 
@@ -359,12 +376,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 const firstTemplate = Object.keys(diagramTemplates[currentDiagramType])[0];
                 loadTemplate(currentDiagramType, firstTemplate);
             }
+            
+            // 如果当前是自然语言编辑器，更新提示词
+            if (currentEditor === 'nl') {
+                updateNLEditorPrompt();
+            }
         });
         
         // 监听模板选择变更
         document.getElementById('template-select').addEventListener('change', function(e) {
             if (e.target.value) {
                 loadTemplate(currentDiagramType, e.target.value);
+                // 如果当前是自然语言编辑器，更新提示词
+                if (currentEditor === 'nl') {
+                    updateNLEditorPrompt();
+                }
             }
         });
         
@@ -1151,26 +1177,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 获取完整提示词
     function getFullPrompt(userContext, diagramType, drawType) {
-        const templateType = 'nl_drawing';
-        const templateName = 'default';
-        
-        const templates = settings.promptTemplates?.[templateType] || {};
-        let promptTemplate = templates[templateName];
-        
-        if (!promptTemplate) {
-            promptTemplate = settings.promptTemplates?.['nl_drawing']?.['default'];
-        }
-        
-        if (!promptTemplate) {
+        if (!settings.promptTemplates) {
             console.error('提示词模板不存在');
             return userContext;
         }
         
-        return formatPromptTemplate(promptTemplate, {
-            user_context: userContext,
-            draw_tool_name: diagramType,
-            draw_type: drawType
-        });
+        // 从新的提示词结构中获取对应的提示词
+        const promptTemplate = settings.promptTemplates[diagramType]?.[drawType];
+        
+        if (!promptTemplate) {
+            console.error('未找到对应的提示词模板');
+            return userContext;
+        }
+        
+        // 拼接用户输入和提示词
+        return userContext + '\n\n' + promptTemplate;
     }
 
     // 获取当前绘图类型
