@@ -331,6 +331,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // 监听保存按钮
         document.getElementById('save-btn').addEventListener('click', handleSave);
         
+        // 导出SVG按钮监听
+        document.getElementById('export-svg-btn').addEventListener('click', exportSVG);
+        
         // 添加自然语言绘图开关监听
         setupNLDrawingListeners();
         
@@ -586,6 +589,19 @@ document.addEventListener('DOMContentLoaded', function() {
                                 // 找到渲染后的SVG
                                 const svg = mermaidContainer.querySelector('svg');
                                 if (svg) {
+                                    // 修复SVG的height和width属性，如果是"auto"则设置为实际值
+                                    if (svg.getAttribute('height') === 'auto' || !svg.getAttribute('height')) {
+                                        const svgRect = svg.getBoundingClientRect();
+                                        svg.setAttribute('height', `${svgRect.height}px`);
+                                        console.log('修复SVG高度: auto -> ', `${svgRect.height}px`);
+                                    }
+                                    
+                                    if (svg.getAttribute('width') === 'auto' || !svg.getAttribute('width')) {
+                                        const svgRect = svg.getBoundingClientRect();
+                                        svg.setAttribute('width', `${svgRect.width}px`);
+                                        console.log('修复SVG宽度: auto -> ', `${svgRect.width}px`);
+                                    }
+                                    
                                     // 将SVG移动到包装器中
                                     svgWrapper.appendChild(svg);
                                     // 先清空预览容器
@@ -990,5 +1006,65 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
+    }
+
+    /**
+     * 导出SVG文件
+     */
+    function exportSVG() {
+        try {
+            // 获取当前时间作为文件名的一部分
+            const now = new Date();
+            const timestamp = now.getFullYear() +
+                String(now.getMonth() + 1).padStart(2, '0') +
+                String(now.getDate()).padStart(2, '0') +
+                String(now.getHours()).padStart(2, '0') +
+                String(now.getMinutes()).padStart(2, '0');
+            
+            // 构建文件名
+            const filename = `langdraw_${currentDiagramType}_${timestamp}.svg`;
+            
+            // 获取预览容器中的SVG元素
+            const container = document.getElementById('preview-container');
+            const svg = container.querySelector('svg');
+            
+            if (!svg) {
+                showToast('没有找到可导出的SVG图表', 'error');
+                return;
+            }
+            
+            // 克隆SVG以避免修改原始图表
+            const svgClone = svg.cloneNode(true);
+            
+            // 确保SVG有正确的命名空间
+            if (!svgClone.getAttribute('xmlns')) {
+                svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            }
+            
+            // 创建一个Blob对象
+            const svgData = new XMLSerializer().serializeToString(svgClone);
+            const blob = new Blob([svgData], { type: 'image/svg+xml' });
+            
+            // 创建下载链接
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            
+            // 模拟点击下载
+            document.body.appendChild(link);
+            link.click();
+            
+            // 清理
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 100);
+            
+            showToast('SVG导出成功', 'success');
+        } catch (error) {
+            console.error('导出SVG失败:', error);
+            showToast('导出SVG失败: ' + error.message, 'error');
+        }
     }
 }); 
