@@ -571,16 +571,8 @@ document.addEventListener('DOMContentLoaded', function() {
         currentAbortController = new AbortController();
 
         try {
-            // 获取用户输入内容（去除系统提示词部分）
-            const content = nlEditor.getValue();
-            const userContent = content.split('\n\n')[0] || content;  // 获取第一部分作为用户输入
-
-            // 获取完整提示词
-            const fullPrompt = getFullPrompt(
-                userContent.trim(),  // 使用处理后的用户输入
-                data.draw_tool_name,
-                data.draw_type
-            );
+            // 直接获取编辑器中的完整内容作为提示词
+            const fullPrompt = nlEditor.getValue().trim();
 
             // 调用大语言模型API
             const response = await fetch('/api/nl-draw', {
