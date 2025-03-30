@@ -87,6 +87,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // 初始化应用
     init();
 
+    // 初始化拖拽分隔条
+    initResizer();
+
     /**
      * 初始化编辑器
      */
@@ -811,5 +814,188 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => {
             isInitialLoad = false;
         }, 500);
+    }
+
+    /**
+     * 初始化拖拽分隔条
+     */
+    function initResizer() {
+        const resizer = document.getElementById('panel-resizer');
+        const previewPanel = document.querySelector('.preview-panel');
+        const editorPanel = document.querySelector('.editor-panel');
+        const container = document.querySelector('.content');
+        
+        // 检测是否为移动设备
+        const isMobile = window.matchMedia("(max-width: 768px)").matches;
+        
+        // 从localStorage获取之前保存的宽度比例
+        const savedPreviewWidth = localStorage.getItem('previewPanelWidth');
+        if (savedPreviewWidth && !isMobile) {
+            previewPanel.style.flex = 'none';
+            previewPanel.style.width = savedPreviewWidth;
+        }
+        
+        // 从localStorage获取之前保存的高度比例（用于移动设备）
+        const savedPreviewHeight = localStorage.getItem('previewPanelHeight');
+        if (savedPreviewHeight && isMobile) {
+            previewPanel.style.flex = 'none';
+            previewPanel.style.height = savedPreviewHeight;
+        }
+        
+        let isResizing = false;
+        let lastClientX = 0;
+        let lastClientY = 0;
+        
+        // 处理鼠标按下事件
+        const handlePointerDown = (e) => {
+            isResizing = true;
+            lastClientX = e.clientX || e.touches[0].clientX;
+            lastClientY = e.clientY || e.touches[0].clientY;
+            resizer.classList.add('active');
+            
+            // 阻止默认事件防止文本选择等
+            e.preventDefault();
+            
+            // 添加相应的事件监听
+            if (e.type === 'touchstart') {
+                document.addEventListener('touchmove', handlePointerMove, { passive: false });
+                document.addEventListener('touchend', handlePointerUp);
+            } else {
+                document.addEventListener('mousemove', handlePointerMove);
+                document.addEventListener('mouseup', handlePointerUp);
+            }
+        };
+        
+        // 处理移动事件
+        const handlePointerMove = (e) => {
+            if (!isResizing) return;
+            
+            // 阻止默认事件，如滚动
+            e.preventDefault();
+            
+            const clientX = e.clientX || e.touches[0].clientX;
+            const clientY = e.clientY || e.touches[0].clientY;
+            
+            if (isMobile) {
+                // 移动设备上调整高度
+                handleVerticalResize(clientY);
+            } else {
+                // 桌面设备上调整宽度
+                handleHorizontalResize(clientX);
+            }
+        };
+        
+        // 处理水平方向的调整（桌面）
+        function handleHorizontalResize(clientX) {
+            // 计算移动距离
+            const deltaX = clientX - lastClientX;
+            lastClientX = clientX;
+            
+            // 获取当前预览面板宽度
+            const previewWidth = previewPanel.offsetWidth;
+            
+            // 设置新宽度（确保最小宽度）
+            let newWidth = Math.max(200, previewWidth + deltaX);
+            
+            // 确保不会超出容器宽度减去最小编辑器宽度
+            const maxWidth = container.offsetWidth - 200 - resizer.offsetWidth;
+            newWidth = Math.min(newWidth, maxWidth);
+            
+            // 更新预览面板宽度
+            previewPanel.style.flex = 'none';
+            previewPanel.style.width = `${newWidth}px`;
+            
+            // 更新编辑器面板宽度（自动填充剩余空间）
+            editorPanel.style.flex = '1';
+            
+            // 保存到localStorage
+            localStorage.setItem('previewPanelWidth', `${newWidth}px`);
+            
+            // 触发窗口大小改变事件，以便重新渲染图表
+            window.dispatchEvent(new Event('resize'));
+        }
+        
+        // 处理垂直方向的调整（移动设备）
+        function handleVerticalResize(clientY) {
+            // 计算移动距离
+            const deltaY = clientY - lastClientY;
+            lastClientY = clientY;
+            
+            // 获取当前预览面板高度
+            const previewHeight = previewPanel.offsetHeight;
+            
+            // 设置新高度（确保最小高度）
+            let newHeight = Math.max(150, previewHeight + deltaY);
+            
+            // 确保不会超出容器高度减去最小编辑器高度
+            const maxHeight = container.offsetHeight - 150;
+            newHeight = Math.min(newHeight, maxHeight);
+            
+            // 更新预览面板高度
+            previewPanel.style.flex = 'none';
+            previewPanel.style.height = `${newHeight}px`;
+            
+            // 更新编辑器面板高度
+            editorPanel.style.flex = 'none';
+            editorPanel.style.height = `${container.offsetHeight - newHeight - resizer.offsetHeight}px`;
+            
+            // 保存到localStorage
+            localStorage.setItem('previewPanelHeight', `${newHeight}px`);
+            
+            // 触发窗口大小改变事件
+            window.dispatchEvent(new Event('resize'));
+        }
+        
+        // 处理指针释放事件
+        const handlePointerUp = () => {
+            isResizing = false;
+            resizer.classList.remove('active');
+            
+            // 移除事件监听
+            document.removeEventListener('mousemove', handlePointerMove);
+            document.removeEventListener('mouseup', handlePointerUp);
+            document.removeEventListener('touchmove', handlePointerMove);
+            document.removeEventListener('touchend', handlePointerUp);
+        };
+        
+        // 添加事件监听器
+        resizer.addEventListener('mousedown', handlePointerDown);
+        resizer.addEventListener('touchstart', handlePointerDown, { passive: false });
+        
+        // 监听媒体查询状态更改
+        const mediaQuery = window.matchMedia("(max-width: 768px)");
+        mediaQuery.addEventListener('change', (e) => {
+            const isMobileNow = e.matches;
+            if (isMobileNow) {
+                // 切换到移动视图
+                previewPanel.style.width = '';
+                previewPanel.style.flex = 'none';
+                const savedHeight = localStorage.getItem('previewPanelHeight') || '50vh';
+                previewPanel.style.height = savedHeight;
+            } else {
+                // 切换到桌面视图
+                previewPanel.style.height = '';
+                previewPanel.style.flex = 'none';
+                const savedWidth = localStorage.getItem('previewPanelWidth') || '50%';
+                previewPanel.style.width = savedWidth;
+            }
+        });
+        
+        // 窗口大小变化时调整面板
+        window.addEventListener('resize', () => {
+            if (isMobile) {
+                // 移动设备上不需要特殊处理，CSS已设置好
+            } else {
+                // 桌面设备需要确保宽度不超出限制
+                const containerWidth = container.offsetWidth;
+                const previewWidth = previewPanel.offsetWidth;
+                
+                if (previewWidth > containerWidth - 200 - resizer.offsetWidth) {
+                    const newWidth = containerWidth - 200 - resizer.offsetWidth;
+                    previewPanel.style.width = `${newWidth}px`;
+                    localStorage.setItem('previewPanelWidth', `${newWidth}px`);
+                }
+            }
+        });
     }
 }); 
