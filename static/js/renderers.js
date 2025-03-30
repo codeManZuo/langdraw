@@ -72,7 +72,13 @@ const DiagramRenderers = {
             let url = `${config.krokiBaseUrl}/${diagramConfig.krokiType}/svg/`;
             
             // 根据图表类型选择适当的方法
-            if (diagramConfig.useEncoder) {
+            if (type === 'excalidraw') {
+                // Excalidraw需要使用特殊的GET请求方式
+                // 对内容进行Base64和URL编码
+                const encodedData = this.encodeExcalidrawData(code);
+                url += encodedData;
+                this.fetchSvgContent(url, container, timestamp, type);
+            } else if (diagramConfig.useEncoder) {
                 // 对于使用编码的图表（如PlantUML）
                 url += diagramData;
                 this.fetchSvgContent(url, container, timestamp, type);
@@ -83,6 +89,51 @@ const DiagramRenderers = {
         } catch (e) {
             console.error('Kroki渲染错误:', e);
             this.showError(`Kroki渲染错误: ${e.message}`, container);
+        }
+    },
+    
+    /**
+     * 编码Excalidraw数据用于GET请求
+     * @param {string} data - Excalidraw JSON数据
+     * @returns {string} 编码后的字符串
+     */
+    encodeExcalidrawData: function(data) {
+        try {
+            // 使用TextEncoder或者兼容方法将字符串编码为UTF-8
+            function textEncode(str) {
+                if (window.TextEncoder) {
+                    return new TextEncoder('utf-8').encode(str);
+                }
+                var utf8 = unescape(encodeURIComponent(str));
+                var result = new Uint8Array(utf8.length);
+                for (var i = 0; i < utf8.length; i++) {
+                    result[i] = utf8.charCodeAt(i);
+                }
+                return result;
+            }
+            
+            // 检查pako库是否可用
+            if (typeof pako === 'undefined') {
+                throw new Error('需要pako库才能进行压缩。请导入pako_deflate.min.js');
+            }
+            
+            // 1. 将图表数据编码为UTF-8的Uint8Array
+            var encoded = textEncode(data);
+            
+            // 2. 使用pako的deflate方法压缩数据（压缩级别9，最佳压缩）
+            var compressed = pako.deflate(encoded, { level: 9, to: 'string' });
+            
+            // 3. 使用btoa将压缩后的数据编码为Base64
+            // 4. 替换+和/字符以使其"URL安全"
+            var result = btoa(compressed)
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=+$/, ''); // 去除末尾的等号
+                
+            return result;
+        } catch (error) {
+            console.error('Excalidraw数据编码错误:', error);
+            throw new Error('Excalidraw数据编码失败: ' + error.message);
         }
     },
     

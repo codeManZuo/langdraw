@@ -488,6 +488,56 @@ endif
 :最终操作;
 stop
 @enduml`,
+
+'状态图': `@startuml
+[*] --> Active
+
+state Active {
+  [*] -> NumLockOff
+  NumLockOff --> NumLockOn : EvNumLockPressed
+  NumLockOn --> NumLockOff : EvNumLockPressed
+  --
+  [*] -> CapsLockOff
+  CapsLockOff --> CapsLockOn : EvCapsLockPressed
+  CapsLockOn --> CapsLockOff : EvCapsLockPressed
+  --
+  [*] -> ScrollLockOff
+  ScrollLockOff --> ScrollLockOn : EvCapsLockPressed
+  ScrollLockOn --> ScrollLockOff : EvCapsLockPressed
+}
+
+@enduml
+`,
+
+'定时图': `@startuml
+robust "Web 浏览器" as WB
+concise "Web 用户" as WU
+
+@0
+WU is 空闲
+WB is 空闲
+
+@100
+WU is 等待中
+WB is 处理中
+
+@300
+WB is 等待中
+@enduml
+`,
+
+'甘特图': `@startgantt
+[Prototype design] requires 15 days
+[Test prototype] requires 10 days
+-- All example --
+[Task 1 (1 day)] requires 1 day
+[T2 (5 days)] requires 5 days
+[T3 (1 week)] requires 1 week
+[T4 (1 week and 4 days)] requires 1 week and 4 days
+[T5 (2 weeks)] requires 2 weeks
+@endgantt
+`,
+
         
         '类图': `@startuml
 class User {
