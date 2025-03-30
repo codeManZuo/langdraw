@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const savedEnableNLDrawing = localStorage.getItem('enableNLDrawing');
     let settings = {                     // 设置对象
         openrouterKey: localStorage.getItem('openrouter-key') || '',
-        enableNLDrawing: savedEnableNLDrawing !== null ? savedEnableNLDrawing === 'true' : true, // 如果未设置，默认启用
+        enableNLDrawing: savedEnableNLDrawing !== null ? savedEnableNLDrawing === 'true' : false, // 如果未设置，默认禁用
         autoRender: localStorage.getItem('autoRender') !== 'false', // 默认开启自动渲染
         promptTemplates: null,  // 存储提示词模板
     };
@@ -464,13 +464,14 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     function updateEditorsState() {
         const nlDrawingCheckbox = document.getElementById('enable-nl-drawing');
-        const isNLDrawingEnabled = nlDrawingCheckbox.checked;
+        const isNLDrawingEnabled = settings.enableNLDrawing && settings.openrouterKey;
         
         // 如果没有API Key，禁用复选框并设置为未选中状态
         if (!settings.openrouterKey) {
             nlDrawingCheckbox.disabled = true;
             nlDrawingCheckbox.checked = false;
             nlDrawingCheckbox.parentElement.classList.add('disabled');
+            settings.enableNLDrawing = false;
         } else {
             nlDrawingCheckbox.disabled = false;
             nlDrawingCheckbox.parentElement.classList.remove('disabled');
@@ -490,7 +491,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // 添加点击事件监听器
             if (!diagramWrapper.hasAttribute('data-has-click-listener')) {
                 diagramWrapper.addEventListener('click', function(e) {
-                    if (document.getElementById('enable-nl-drawing').checked) {
+                    if (settings.enableNLDrawing && settings.openrouterKey) {
                         showToast('图表源码已锁定，请先退出自然语言模式再编辑', 3000);
                     }
                 });
@@ -854,6 +855,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // 确保设置弹窗初始时是隐藏的
         modal.style.display = "none";
+
+        // 如果没有API Key，禁用自然语言绘图
+        if (!settings.openrouterKey) {
+            settings.enableNLDrawing = false;
+            localStorage.setItem('enableNLDrawing', 'false');
+        }
         
         // 加载保存的设置到设置弹窗中，但不显示弹窗
         openrouterKeyInput.value = settings.openrouterKey;
@@ -871,6 +878,17 @@ document.addEventListener('DOMContentLoaded', function() {
             // 更新设置弹窗内容（确保反映最新状态）
             openrouterKeyInput.value = settings.openrouterKey;
             enableNLDrawingCheckbox.checked = settings.enableNLDrawing;
+            
+            // 根据API Key状态设置复选框状态
+            if (!settings.openrouterKey) {
+                enableNLDrawingCheckbox.disabled = true;
+                enableNLDrawingCheckbox.checked = false;
+                enableNLDrawingCheckbox.parentElement.classList.add('disabled');
+            } else {
+                enableNLDrawingCheckbox.disabled = false;
+                enableNLDrawingCheckbox.parentElement.classList.remove('disabled');
+            }
+            
             modal.classList.add('show');
         }
 
