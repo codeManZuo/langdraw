@@ -17,7 +17,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let settings = {                     // 设置对象
         openrouterKey: localStorage.getItem('openrouterKey') || '',
         enableNLDrawing: savedEnableNLDrawing !== null ? savedEnableNLDrawing === 'true' : true, // 如果未设置，默认启用
-        autoRender: localStorage.getItem('autoRender') !== 'false' // 默认开启自动渲染
+        autoRender: localStorage.getItem('autoRender') !== 'false', // 默认开启自动渲染
+        promptTemplates: null,  // 存储提示词模板
     };
     let isProcessingNLDrawing = false;   // 添加标志变量
     let lastGeneratedCode = null;        // 存储最后一次生成的代码
@@ -471,13 +472,23 @@ document.addEventListener('DOMContentLoaded', function() {
         currentAbortController = new AbortController();
 
         try {
+            // 获取完整提示词
+            const fullPrompt = getFullPrompt(
+                data.user_context,
+                data.draw_tool_name,
+                data.draw_type
+            );
+
             // 调用大语言模型API
             const response = await fetch('/api/nl-draw', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(data),
+                body: JSON.stringify({
+                    api_key: data.api_key,
+                    prompt: fullPrompt  // 使用拼接后的完整提示词
+                }),
                 signal: currentAbortController.signal
             });
             
@@ -809,7 +820,10 @@ document.addEventListener('DOMContentLoaded', function() {
     /**
      * 初始化应用
      */
-    function init() {
+    async function init() {
+        // 加载提示词模板
+        await loadPromptTemplates();
+        
         // 设置初始UI状态
         document.getElementById('enable-nl-drawing').checked = settings.enableNLDrawing;
         document.getElementById('enable-auto-render').checked = settings.autoRender;
@@ -1065,6 +1079,90 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('导出SVG失败:', error);
             showToast('导出SVG失败: ' + error.message, 'error');
+        }
+    }
+
+    // 加载提示词模板
+    async function loadPromptTemplates() {
+        try {
+            const response = await fetch('/static/config/prompts.json');
+            if (!response.ok) {
+                throw new Error('Failed to load prompt templates');
+            }
+            settings.promptTemplates = await response.json();
+            console.log('提示词模板加载成功:', settings.promptTemplates);
+        } catch (error) {
+            console.error('加载提示词模板失败:', error);
+            // 使用默认模板作为备份
+            settings.promptTemplates = {
+                "nl_drawing": {
+                    "default": "{user_context}。请你基于以上信息,给我{draw_tool_name}的{draw_type}图的文本格式。并且你一定要遵循以下规则：\n1. 你只能输出这个图相关的文本,其他任何文本信息都不要输出给我\n2. 你需要注意绘图文本中一些特殊文案字符的转义或处理，比如在mermaid流程图中，如果内容包含中括号，比如下面这样：\nH -->|否| J{{该范围[1024,3024]可以进行处理}}\n那么你需要将内容放在双引号中，像下面这样，因为中括号是mermaid的关键字，不能直接使用：\nH -->|否| J{{\"该范围[1024,3024]可以进行处理\"}}\n3. 其他的绘图，你输出的时候也一定要注意关键字冲突和转移的问题。"
+                }
+            };
+        }
+    }
+
+    // 格式化提示词模板
+    function formatPromptTemplate(template, params) {
+        return template.replace(/\{(\w+)\}/g, (match, key) => {
+            return params[key] || match;
+        });
+    }
+
+    // 获取完整提示词
+    function getFullPrompt(userContext, diagramType, drawType) {
+        const templateType = 'nl_drawing';
+        const templateName = 'default';
+        
+        const templates = settings.promptTemplates?.[templateType] || {};
+        let promptTemplate = templates[templateName];
+        
+        if (!promptTemplate) {
+            promptTemplate = settings.promptTemplates?.['nl_drawing']?.['default'];
+        }
+        
+        if (!promptTemplate) {
+            console.error('提示词模板不存在');
+            return userContext;
+        }
+        
+        return formatPromptTemplate(promptTemplate, {
+            user_context: userContext,
+            draw_tool_name: diagramType,
+            draw_type: drawType
+        });
+    }
+
+    // 修改调用LLM的函数
+    async function callLLM(nlContent) {
+        try {
+            if (!settings.openrouterKey) {
+                showError('请先在设置中配置OpenRouter API Key');
+                return;
+            }
+
+            // 获取完整提示词
+            const fullPrompt = getFullPrompt(
+                nlContent,
+                currentDiagramType,
+                getDrawType(currentDiagramType)
+            );
+
+            const response = await fetch('/api/nl-draw', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    api_key: settings.openrouterKey,
+                    prompt: fullPrompt  // 直接发送完整提示词
+                })
+            });
+
+            // ... existing code ...
+        } catch (error) {
+            console.error('调用LLM出错:', error);
+            showError('调用LLM失败: ' + error.message);
         }
     }
 }); 

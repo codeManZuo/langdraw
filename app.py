@@ -41,40 +41,17 @@ def natural_language_draw():
     try:
         data = request.json
         api_key = data.get('api_key')
-        user_context = data.get('user_context')
-        draw_tool_name = data.get('draw_tool_name')
-        draw_type = data.get('draw_type')
-        template_type = data.get('template_type', 'nl_drawing')  # 默认使用nl_drawing类型的模板
-        template_name = data.get('template_name', 'default')     # 默认使用default模板
+        prompt = data.get('prompt')  # 直接获取完整的prompt
 
         # 打印请求参数（不包含API key）
-        print(f"收到绘图请求: tool={draw_tool_name}, type={draw_type}, template={template_type}/{template_name}")
+        print(f"收到绘图请求，prompt长度: {len(prompt) if prompt else 0}")
 
-        if not all([api_key, user_context, draw_tool_name, draw_type]):
+        if not all([api_key, prompt]):
             missing_params = [param for param, value in {
                 'api_key': api_key,
-                'user_context': user_context,
-                'draw_tool_name': draw_tool_name,
-                'draw_type': draw_type
+                'prompt': prompt
             }.items() if not value]
             return jsonify({'error': f'缺少必要参数: {", ".join(missing_params)}'}), 400
-
-        # 获取提示词模板
-        templates = PROMPT_TEMPLATES.get(template_type, {})
-        prompt_template = templates.get(template_name)
-        
-        if not prompt_template:
-            # 如果指定模板不存在，使用默认模板
-            prompt_template = PROMPT_TEMPLATES.get('nl_drawing', {}).get('default')
-            if not prompt_template:
-                return jsonify({'error': '提示词模板不存在'}), 500
-        
-        # 格式化提示词
-        prompt = prompt_template.format(
-            user_context=user_context,
-            draw_tool_name=draw_tool_name,
-            draw_type=draw_type
-        )
 
         print(f"发送到OpenRouter的提示词: {prompt}")
 
