@@ -587,6 +587,10 @@ const DiagramRenderers = {
         
         // 更新缩放
         function updateZoom() {
+            // 应用缩放前，计算变化前的尺寸以防止突变
+            const oldWidth = zoomContentWrapper.offsetWidth;
+            const oldHeight = zoomContentWrapper.offsetHeight;
+            
             // 应用缩放
             zoomContainer.style.transform = `scale(${scale})`;
             
@@ -630,6 +634,36 @@ const DiagramRenderers = {
             updateZoom();
         });
         
+        // 平滑缩放函数
+        function smoothZoom(targetScale, callback) {
+            const startScale = scale;
+            const scaleDiff = targetScale - startScale;
+            const duration = 200; // 动画持续时间（毫秒）
+            const startTime = performance.now();
+            
+            // 动画函数
+            function animate(currentTime) {
+                const elapsedTime = currentTime - startTime;
+                const progress = Math.min(elapsedTime / duration, 1);
+                // 使用easeOutQuad缓动函数使动画更平滑
+                const easedProgress = 1 - (1 - progress) * (1 - progress);
+                
+                scale = startScale + scaleDiff * easedProgress;
+                updateZoom();
+                
+                if (progress < 1) {
+                    // 继续动画
+                    requestAnimationFrame(animate);
+                } else {
+                    // 动画完成后执行回调
+                    if (callback) callback();
+                }
+            }
+            
+            // 开始动画
+            requestAnimationFrame(animate);
+        }
+        
         // 事件监听器
         zoomInBtn.addEventListener('click', function() {
             // 获取当前滚动位置和中心点
@@ -642,22 +676,18 @@ const DiagramRenderers = {
             const centerRatioX = scrollCenterX / contentWidth;
             const centerRatioY = scrollCenterY / contentHeight;
             
-            // 增加缩放值
-            scale += scaleStep;
-            updateZoom();
-            
-            // 等待DOM更新
-            setTimeout(() => {
-                // 计算新的内容尺寸和滚动位置
+            // 增加缩放值并平滑过渡
+            const targetScale = scale + scaleStep;
+            smoothZoom(targetScale, () => {
+                // 动画完成后调整滚动位置
                 const newContentWidth = zoomContentWrapper.scrollWidth;
                 const newContentHeight = zoomContentWrapper.scrollHeight;
                 const newScrollLeft = (newContentWidth * centerRatioX) - (scrollContainer.clientWidth / 2);
                 const newScrollTop = (newContentHeight * centerRatioY) - (scrollContainer.clientHeight / 2);
                 
-                // 应用新滚动位置
                 scrollContainer.scrollLeft = newScrollLeft;
                 scrollContainer.scrollTop = newScrollTop;
-            }, 10);
+            });
         });
         
         zoomOutBtn.addEventListener('click', function() {
@@ -669,34 +699,27 @@ const DiagramRenderers = {
             const centerRatioX = scrollCenterX / contentWidth;
             const centerRatioY = scrollCenterY / contentHeight;
             
-            // 缩小
-            scale = Math.max(0.1, scale - scaleStep);
-            updateZoom();
-            
-            // 等待DOM更新
-            setTimeout(() => {
-                // 计算新的滚动位置
+            // 缩小并平滑过渡
+            const targetScale = Math.max(0.1, scale - scaleStep);
+            smoothZoom(targetScale, () => {
+                // 动画完成后调整滚动位置
                 const newContentWidth = zoomContentWrapper.scrollWidth;
                 const newContentHeight = zoomContentWrapper.scrollHeight;
                 const newScrollLeft = (newContentWidth * centerRatioX) - (scrollContainer.clientWidth / 2);
                 const newScrollTop = (newContentHeight * centerRatioY) - (scrollContainer.clientHeight / 2);
                 
-                // 应用新滚动位置
                 scrollContainer.scrollLeft = newScrollLeft;
                 scrollContainer.scrollTop = newScrollTop;
-            }, 10);
+            });
         });
         
         resetBtn.addEventListener('click', function() {
-            // 重置缩放
-            scale = 0.8;
-            updateZoom();
-            
-            // 等待DOM更新后滚动到中心
-            setTimeout(() => {
+            // 重置缩放并平滑过渡
+            smoothZoom(0.8, () => {
+                // 动画完成后滚动到中心
                 scrollContainer.scrollLeft = (zoomContentWrapper.scrollWidth - scrollContainer.clientWidth) / 2;
                 scrollContainer.scrollTop = (zoomContentWrapper.scrollHeight - scrollContainer.clientHeight) / 2;
-            }, 10);
+            });
         });
         
         // 添加鼠标滚轮缩放支持
@@ -720,28 +743,29 @@ const DiagramRenderers = {
                 const ratioY = pointY / contentHeight;
                 
                 // 更新缩放值
+                let targetScale;
                 if (e.deltaY < 0) {
                     // 向上滚动，放大
-                    scale = Math.min(5, scale + scaleStep);
+                    targetScale = Math.min(5, scale + scaleStep);
                 } else {
                     // 向下滚动，缩小
-                    scale = Math.max(0.1, scale - scaleStep);
+                    targetScale = Math.max(0.1, scale - scaleStep);
                 }
                 
+                // 直接更新缩放，不使用动画（滚轮操作通常期望立即响应）
+                scale = targetScale;
                 updateZoom();
                 
-                // 等待DOM更新
+                // 立即调整滚动位置而不是等待动画
                 setTimeout(() => {
-                    // 计算缩放后的新位置
                     const newContentWidth = zoomContentWrapper.scrollWidth;
                     const newContentHeight = zoomContentWrapper.scrollHeight;
                     const newPointX = newContentWidth * ratioX;
                     const newPointY = newContentHeight * ratioY;
                     
-                    // 调整滚动位置，使鼠标位置保持在同一内容点上
                     scrollContainer.scrollLeft = newPointX - mouseX;
                     scrollContainer.scrollTop = newPointY - mouseY;
-                }, 10);
+                }, 5);
             }
         }, { passive: false });
     },
