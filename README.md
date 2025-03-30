@@ -1,13 +1,13 @@
 # 在线绘图工具
 
-一个简单的Web应用，用于创建和编辑图表，支持PlantUML和Mermaid语法。
+一个支持使用自然语言绘图的Web应用，用于创建流程图、时序图、甘特图、架构图、类图、实体图等等，支持PlantUML和Mermaid等语法。
 
 ## 功能特点
 
 - 支持Mermaid和PlantUML两种图表语法
 - 实时预览功能
 - 内置多种常用图表模板
-- 响应式设计，适配不同尺寸的屏幕
+- 支持OpenRouter的apikey
 - 轻量级，无需复杂的框架
 
 ## 技术栈
@@ -23,31 +23,39 @@
 
 ### 环境要求
 
-- Python 3.6+
+- Python 3.8+
 - Flask
 
 ### 安装依赖
 
 ```bash
-pip install flask
+flask==2.3.3 
+openai==1.69.0
+httpx[socks]==0.25.2
 ```
+
 
 ### 运行应用
 
-```bash
-python app.py
+```
+git clone https://github.com/codeManZuo/langdraw.git
+cd langdraw/
+docker build -t langdraw .
+docker run -d -p 3002:3002 --name langdraw-container langdraw
 ```
 
-启动后，在浏览器中访问 http://localhost:5000 即可使用应用。
+或者直接
+
+```
+python ./app.py
+```
+
+
+启动后，在浏览器中访问 http://localhost:3002 即可使用应用。
 
 ## 使用方法
 
-1. 在顶部工具栏选择图表类型（Mermaid或PlantUML）
-2. 从模板下拉菜单中选择一个预设模板，或直接在编辑器中编写代码
-3. 编辑器中的内容会实时渲染在左侧预览区域
-
-## 扩展与定制
-
-- 添加新模板：在`static/js/templates.js`文件中添加新的模板定义
-- 修改样式：编辑`static/css/style.css`文件
-- 添加新的图表类型：修改`static/js/main.js`文件，实现相应的渲染函数 
+1. 启用自然语言绘图需要先在设置中配置apikey
+2. apikey可以去OpenRouter官网申请免费的
+3. 可以自定义修改系统提示词
+4. ctrl/command+s 用于手动保存并渲染
