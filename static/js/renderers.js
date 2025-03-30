@@ -376,7 +376,7 @@ const DiagramRenderers = {
         container.appendChild(svgWrapper);
         
         // 当图表比较复杂时添加缩放控制
-        if (type === 'plantuml' || type === 'mermaid' || type === 'seqdiag' || type === 'actdiag' || type === 'bpmn' || type === 'erd') {
+        if (type === 'seqdiag' || type === 'actdiag' || type === 'bpmn' || type === 'erd' || type === 'mermaid'  || type === 'plantuml') {
             this.addZoomControls(container, svgWrapper);
             
             // 为特定图表添加额外的全屏按钮
@@ -668,6 +668,28 @@ const DiagramRenderers = {
             
             // 渲染Mermaid图表
             mermaid.init(undefined, div);
+            
+            // 创建一个包装器元素，包含mermaid渲染后的内容
+            const svgWrapper = document.createElement('div');
+            svgWrapper.className = 'mermaid-wrapper';
+            
+            // 等待mermaid渲染完成
+            setTimeout(() => {
+                // 找到渲染后的SVG
+                const svg = div.querySelector('svg');
+                if (svg) {
+                    // 将SVG移动到包装器中
+                    svgWrapper.appendChild(svg);
+                    // 先清空容器
+                    container.innerHTML = '';
+                    // 添加包装器到容器
+                    container.appendChild(svgWrapper);
+                    // 添加缩放控制
+                    this.addZoomControls(container, svgWrapper);
+                    // 添加全屏按钮
+                    this.addFullscreenButton(container, svgWrapper);
+                }
+            }, 100);
         } catch (e) {
             console.error('Mermaid渲染错误:', e);
             this.showError(`Mermaid语法错误: ${e.message}`, container);

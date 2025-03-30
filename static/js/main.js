@@ -572,6 +572,29 @@ document.addEventListener('DOMContentLoaded', function() {
                             
                             // 触发Mermaid渲染
                             mermaid.init(undefined, mermaidContainer);
+                            
+                            // 创建一个包装器元素，包含mermaid渲染后的内容
+                            // 这样我们可以为它添加缩放控制
+                            const svgWrapper = document.createElement('div');
+                            svgWrapper.className = 'mermaid-wrapper';
+                            
+                            // 等待mermaid渲染完成
+                            setTimeout(() => {
+                                // 找到渲染后的SVG
+                                const svg = mermaidContainer.querySelector('svg');
+                                if (svg) {
+                                    // 将SVG移动到包装器中
+                                    svgWrapper.appendChild(svg);
+                                    // 先清空预览容器
+                                    previewContainer.innerHTML = '';
+                                    // 添加包装器到预览容器
+                                    previewContainer.appendChild(svgWrapper);
+                                    // 添加缩放控制
+                                    DiagramRenderers.addZoomControls(previewContainer, svgWrapper);
+                                    // 添加全屏按钮
+                                    DiagramRenderers.addFullscreenButton(previewContainer, svgWrapper);
+                                }
+                            }, 100);
                             break;
                             
                         default:
