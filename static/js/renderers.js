@@ -422,6 +422,9 @@ const DiagramRenderers = {
         zoomInBtn.style.color = '#333333';
         zoomInBtn.style.backgroundColor = '#f5f5f5';
         zoomInBtn.style.border = '1px solid #cccccc';
+        zoomInBtn.style.display = 'flex';
+        zoomInBtn.style.alignItems = 'center';
+        zoomInBtn.style.justifyContent = 'center';
         
         // 创建缩小按钮
         const zoomOutBtn = document.createElement('button');
@@ -435,6 +438,9 @@ const DiagramRenderers = {
         zoomOutBtn.style.color = '#333333';
         zoomOutBtn.style.backgroundColor = '#f5f5f5';
         zoomOutBtn.style.border = '1px solid #cccccc';
+        zoomOutBtn.style.display = 'flex';
+        zoomOutBtn.style.alignItems = 'center';
+        zoomOutBtn.style.justifyContent = 'center';
         
         // 创建重置按钮
         const resetBtn = document.createElement('button');
@@ -445,6 +451,9 @@ const DiagramRenderers = {
         resetBtn.style.color = '#333333';
         resetBtn.style.backgroundColor = '#f5f5f5';
         resetBtn.style.border = '1px solid #cccccc';
+        resetBtn.style.display = 'flex';
+        resetBtn.style.alignItems = 'center';
+        resetBtn.style.justifyContent = 'center';
         
         // 添加按钮到控制容器
         zoomControls.appendChild(zoomInBtn);
@@ -521,6 +530,9 @@ const DiagramRenderers = {
         fullscreenBtn.style.color = '#333333';
         fullscreenBtn.style.backgroundColor = '#f5f5f5';
         fullscreenBtn.style.border = '1px solid #cccccc';
+        fullscreenBtn.style.display = 'flex';
+        fullscreenBtn.style.alignItems = 'center';
+        fullscreenBtn.style.justifyContent = 'center';
         
         // 添加全屏功能
         fullscreenBtn.addEventListener('click', function() {
