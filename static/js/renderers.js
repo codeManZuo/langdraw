@@ -398,10 +398,10 @@ const DiagramRenderers = {
         zoomControls.style.position = 'absolute';
         zoomControls.style.top = '10px';
         zoomControls.style.right = '10px';
-        zoomControls.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
+        zoomControls.style.backgroundColor = '#ffffff';
         zoomControls.style.padding = '5px';
+        zoomControls.style.border = '1px solid #cccccc';
         zoomControls.style.borderRadius = '4px';
-        zoomControls.style.boxShadow = '0 1px 3px rgba(0,0,0,0.2)';
         zoomControls.style.zIndex = '100';
         zoomControls.style.display = 'flex';
         zoomControls.style.gap = '5px';
@@ -416,9 +416,12 @@ const DiagramRenderers = {
         zoomInBtn.style.width = '30px';
         zoomInBtn.style.height = '30px';
         zoomInBtn.style.cursor = 'pointer';
-        zoomInBtn.style.border = '1px solid #ccc';
-        zoomInBtn.style.borderRadius = '4px';
-        zoomInBtn.style.backgroundColor = '#fff';
+        zoomInBtn.style.fontSize = '20px';
+        zoomInBtn.style.lineHeight = '20px';
+        zoomInBtn.style.padding = '0';
+        zoomInBtn.style.color = '#333333';
+        zoomInBtn.style.backgroundColor = '#f5f5f5';
+        zoomInBtn.style.border = '1px solid #cccccc';
         
         // 创建缩小按钮
         const zoomOutBtn = document.createElement('button');
@@ -426,18 +429,22 @@ const DiagramRenderers = {
         zoomOutBtn.style.width = '30px';
         zoomOutBtn.style.height = '30px';
         zoomOutBtn.style.cursor = 'pointer';
-        zoomOutBtn.style.border = '1px solid #ccc';
-        zoomOutBtn.style.borderRadius = '4px';
-        zoomOutBtn.style.backgroundColor = '#fff';
+        zoomOutBtn.style.fontSize = '20px';
+        zoomOutBtn.style.lineHeight = '20px';
+        zoomOutBtn.style.padding = '0';
+        zoomOutBtn.style.color = '#333333';
+        zoomOutBtn.style.backgroundColor = '#f5f5f5';
+        zoomOutBtn.style.border = '1px solid #cccccc';
         
         // 创建重置按钮
         const resetBtn = document.createElement('button');
         resetBtn.textContent = '重置';
         resetBtn.style.cursor = 'pointer';
-        resetBtn.style.border = '1px solid #ccc';
-        resetBtn.style.borderRadius = '4px';
-        resetBtn.style.backgroundColor = '#fff';
         resetBtn.style.padding = '0 5px';
+        resetBtn.style.height = '30px';
+        resetBtn.style.color = '#333333';
+        resetBtn.style.backgroundColor = '#f5f5f5';
+        resetBtn.style.border = '1px solid #cccccc';
         
         // 添加按钮到控制容器
         zoomControls.appendChild(zoomInBtn);
@@ -485,7 +492,7 @@ const DiagramRenderers = {
      * @param {HTMLElement} svgWrapper - SVG包装器
      */
     addFullscreenButton: function(container, svgWrapper) {
-        // 获取缩放控件容器（如果已存在）
+        //.获取缩放控件容器（如果已存在）
         let zoomControls = container.querySelector('.zoom-controls');
         
         // 如果不存在，创建一个新的
@@ -495,10 +502,10 @@ const DiagramRenderers = {
             zoomControls.style.position = 'absolute';
             zoomControls.style.top = '10px';
             zoomControls.style.right = '10px';
-            zoomControls.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
+            zoomControls.style.backgroundColor = '#ffffff';
             zoomControls.style.padding = '5px';
+            zoomControls.style.border = '1px solid #cccccc';
             zoomControls.style.borderRadius = '4px';
-            zoomControls.style.boxShadow = '0 1px 3px rgba(0,0,0,0.2)';
             zoomControls.style.zIndex = '100';
             zoomControls.style.display = 'flex';
             zoomControls.style.gap = '5px';
@@ -509,10 +516,11 @@ const DiagramRenderers = {
         const fullscreenBtn = document.createElement('button');
         fullscreenBtn.textContent = '全屏';
         fullscreenBtn.style.cursor = 'pointer';
-        fullscreenBtn.style.border = '1px solid #ccc';
-        fullscreenBtn.style.borderRadius = '4px';
-        fullscreenBtn.style.backgroundColor = '#fff';
         fullscreenBtn.style.padding = '0 5px';
+        fullscreenBtn.style.height = '30px';
+        fullscreenBtn.style.color = '#333333';
+        fullscreenBtn.style.backgroundColor = '#f5f5f5';
+        fullscreenBtn.style.border = '1px solid #cccccc';
         
         // 添加全屏功能
         fullscreenBtn.addEventListener('click', function() {
@@ -527,7 +535,7 @@ const DiagramRenderers = {
                 } else if (svgWrapper.msRequestFullscreen) { /* IE/Edge */
                     svgWrapper.msRequestFullscreen();
                 }
-                fullscreenBtn.textContent = '退出全屏';
+                fullscreenBtn.textContent = '退出';
             } else {
                 // 退出全屏模式
                 if (document.exitFullscreen) {
@@ -546,7 +554,7 @@ const DiagramRenderers = {
         // 监听全屏变化事件
         document.addEventListener('fullscreenchange', function() {
             if (document.fullscreenElement) {
-                fullscreenBtn.textContent = '退出全屏';
+                fullscreenBtn.textContent = '退出';
             } else {
                 fullscreenBtn.textContent = '全屏';
             }
