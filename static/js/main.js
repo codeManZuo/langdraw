@@ -632,9 +632,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                 showToast('生成完成');
                             }
                         } catch (error) {
-                            console.error('解析响应数据错误:', error);
-                            showToast('生成失败: 解析响应数据错误', 3000);
-                            return;
+                            console.error('解析响应数据错误:', error,line);
+                            continue;
+                            // showToast('生成失败: 解析响应数据错误', 3000);
+                            // return;
                         }
                     }
                 }
