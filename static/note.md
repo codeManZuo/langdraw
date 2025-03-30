@@ -1363,6 +1363,137 @@ function toggleEditor() {
 3. 验证所有现有功能在新 UI 下正常工作
 4. 检查编辑器内容保持一致，切换不会导致内容丢失
 
+### 13. 编辑器拖拽调整大小
+
+#### 13.1 需求描述
+- **问题背景**：用户需要根据实际需求调整编辑器和预览区域的大小比例
+- **目标**：提供直观的拖拽调整界面布局的功能
+- **具体需求**：
+  1. 拖拽分隔条：
+     - 在编辑器和预览区域之间添加可拖拽的分隔条
+     - 分隔条样式要清晰可见
+     - 鼠标悬停时显示可拖拽的提示
+  2. 拖拽交互：
+     - 鼠标按住分隔条可以左右拖动
+     - 拖动时实时调整两侧区域的宽度
+     - 拖动结束后保持调整后的布局
+  3. 限制控制：
+     - 设置最小宽度限制，防止区域被完全收起
+     - 保持拖拽过程中的平滑过渡
+     - 窗口大小改变时保持比例
+
+#### 13.2 验收标准
+1. 功能完整性：
+   - 分隔条可以自由拖动
+   - 两侧区域大小实时更新
+   - 拖动平滑无卡顿
+2. 交互体验：
+   - 鼠标悬停时显示合适的光标样式
+   - 拖动时提供视觉反馈
+   - 拖动结束后布局稳定
+3. 边界处理：
+   - 不允许拖动超出合理范围
+   - 窗口大小变化时布局自适应
+   - 保存布局比例供下次使用
+
+#### 13.3 实现方案
+```javascript
+/**
+ * 初始化拖拽分隔条
+ */
+function initResizer() {
+    const resizer = document.querySelector('.resizer');
+    const leftPanel = document.querySelector('.editor-panel');
+    const rightPanel = document.querySelector('.preview-panel');
+    
+    // 最小宽度限制（像素）
+    const minWidth = 200;
+    
+    // 拖动处理
+    function handleDrag(e) {
+        const containerWidth = resizer.parentNode.getBoundingClientRect().width;
+        let newLeftWidth = e.clientX;
+        
+        // 限制最小宽度
+        if (newLeftWidth < minWidth) {
+            newLeftWidth = minWidth;
+        } else if (newLeftWidth > containerWidth - minWidth) {
+            newLeftWidth = containerWidth - minWidth;
+        }
+        
+        // 更新宽度
+        leftPanel.style.width = `${newLeftWidth}px`;
+        rightPanel.style.width = `${containerWidth - newLeftWidth - 8}px`; // 8px为分隔条宽度
+        
+        // 保存当前比例
+        const ratio = newLeftWidth / containerWidth;
+        localStorage.setItem('editorWidthRatio', ratio);
+        
+        // 刷新编辑器以确保正确显示
+        if (diagramEditor) diagramEditor.refresh();
+        if (nlEditor) nlEditor.refresh();
+    }
+    
+    // 绑定拖动事件
+    resizer.addEventListener('mousedown', function(e) {
+        document.addEventListener('mousemove', handleDrag);
+        document.addEventListener('mouseup', function() {
+            document.removeEventListener('mousemove', handleDrag);
+        }, { once: true });
+    });
+    
+    // 窗口大小改变时保持比例
+    window.addEventListener('resize', function() {
+        const ratio = localStorage.getItem('editorWidthRatio') || 0.5;
+        const containerWidth = resizer.parentNode.getBoundingClientRect().width;
+        const newLeftWidth = containerWidth * ratio;
+        
+        leftPanel.style.width = `${newLeftWidth}px`;
+        rightPanel.style.width = `${containerWidth - newLeftWidth - 8}px`;
+    });
+}
+```
+
+```css
+/* 分隔条样式 */
+.resizer {
+    width: 8px;
+    background-color: #f0f0f0;
+    cursor: col-resize;
+    transition: background-color 0.2s ease;
+}
+
+.resizer:hover {
+    background-color: #d0d0d0;
+}
+
+.resizer.dragging {
+    background-color: #a0a0a0;
+}
+```
+
+#### 13.4 关键设计说明
+1. **拖拽实现**
+   - 使用鼠标事件处理拖拽操作
+   - 实时计算和更新面板宽度
+   - 保存宽度比例到本地存储
+
+2. **限制处理**
+   - 设置最小宽度防止面板过小
+   - 平滑的过渡动画提升体验
+   - 窗口大小变化时自动调整
+
+3. **性能优化**
+   - 使用 requestAnimationFrame 优化拖动性能
+   - 编辑器刷新确保内容正确显示
+   - 防抖处理避免过于频繁的存储操作
+
+#### 13.5 注意事项
+1. 确保拖拽过程中不会影响编辑器的正常使用
+2. 处理好窗口大小改变时的布局调整
+3. 注意保存的布局比例的兼容性处理
+4. 考虑移动端的交互方式
+
 ## 提示词模板系统
 
 为了使自然语言绘图更加灵活且易于维护，我们实现了一个提示词模板系统。
@@ -1417,3 +1548,233 @@ POST /api/reload-templates
 - `{user_context}`: 用户提供的上下文信息
 - `{draw_tool_name}`: 绘图工具名称 (如 "mermaid", "plantuml" 等)
 - `{draw_type}`: 图表类型 (如 "流程图", "时序图" 等)
+
+### 9. 自然语言编辑器样式优化
+
+#### 9.1 需求描述
+- **问题背景**：自然语言编辑器中的系统提示词样式不一致，影响用户体验
+- **目标**：统一系统提示词样式，优化空行处理
+- **具体需求**：
+  1. 样式统一：
+     - 确保所有系统提示词行都有相同的样式
+     - 修复首行样式与其他行不一致的问题
+  2. 空行处理：
+     - 保持空行的稳定性
+     - 确保空行不会影响系统提示词的显示
+  3. 内容保留：
+     - 切换模板时保留用户输入的内容
+     - 系统提示词始终显示在用户内容之后
+
+#### 9.2 验收标准
+1. 样式要求：
+   - 所有系统提示词行的样式完全一致
+   - 首行不会出现样式异常
+2. 空行处理：
+   - 空行在编辑器中保持稳定
+   - 切换模板时不会影响空行显示
+3. 内容同步：
+   - 用户内容在切换模板时不会丢失
+   - 系统提示词正确显示在用户内容后
+
+### 10. API密钥验证与功能控制
+
+#### 10.1 需求描述
+- **问题背景**：需要防止用户在未配置API密钥的情况下使用自然语言绘图功能
+- **目标**：优化API密钥验证流程和功能控制
+- **具体需求**：
+  1. 功能控制：
+     - 未设置API密钥时禁止切换到自然语言绘图模式
+     - 自然语言绘图复选框在未设置API密钥时保持禁用状态
+  2. 用户提示：
+     - 鼠标悬停在禁用的复选框上时显示提示信息
+     - 提示用户需要先配置API密钥
+  3. 状态管理：
+     - 修复设置按钮点击后复选框状态异常的问题
+     - 确保API密钥状态与功能可用性同步
+
+#### 10.2 验收标准
+1. 功能限制：
+   - 未设置API密钥时无法启用自然语言绘图
+   - 复选框显示禁用状态
+2. 交互体验：
+   - 鼠标悬停时显示清晰的提示信息
+   - 提示内容指导用户配置API密钥
+3. 状态同步：
+   - 设置界面的状态与功能可用性保持一致
+   - API密钥配置后自动启用相关功能
+
+### 11. 流式响应处理优化
+
+#### 11.1 需求描述
+- **问题背景**：在Linux服务器上通过Nginx转发时，流式响应可能因超时而中断
+- **目标**：提高流式响应的稳定性和可靠性
+- **具体需求**：
+  1. Nginx配置优化：
+     - 增加代理超时时间设置
+     - 优化代理缓冲配置
+  2. 前端处理改进：
+     - 优化JSON解析逻辑
+     - 添加对不完整响应的处理机制
+  3. 数据完整性：
+     - 确保Unicode字符串不会被截断
+     - 使用缓冲区机制处理分片数据
+
+#### 11.2 验收标准
+1. 稳定性：
+   - 长时间的流式响应不会中断
+   - 服务器正确处理所有请求
+2. 数据完整性：
+   - Unicode字符串正确解析
+   - 不会出现数据截断问题
+3. 错误处理：
+   - 优雅处理超时情况
+   - 提供清晰的错误提示
+
+### 12. 初始化提示词优化
+
+#### 12.1 需求描述
+- **问题背景**：页面首次加载时，自然语言编辑器中没有默认的系统提示词
+- **目标**：提供更好的初始化体验
+- **具体需求**：
+  1. 默认提示词：
+     - 页面首次加载时显示默认系统提示词
+     - 即使用户未选择模板也能显示提示词
+  2. 模板加载：
+     - 优化提示词模板的加载逻辑
+     - 确保模板加载失败时有合理的默认值
+  3. 状态同步：
+     - 保持编辑器状态与提示词显示的同步
+     - 避免提示词闪烁或重复显示
+
+#### 12.2 验收标准
+1. 初始化：
+   - 页面加载后立即显示默认提示词
+   - 提示词显示位置正确
+2. 模板处理：
+   - 正确加载和应用模板内容
+   - 模板切换时提示词更新正确
+3. 用户体验：
+   - 提示词显示流畅，无闪烁
+   - 编辑器状态与提示词保持同步
+
+### 14. 系统提示词前端展示优化
+
+#### 14.1 需求描述
+- **问题背景**：系统提示词需要在前端展示，并且需要与用户输入有明显的视觉区分
+- **目标**：优化系统提示词的展示效果，提升用户体验
+- **具体需求**：
+  1. 提示词位置：
+     - 系统提示词显示在编辑器顶部
+     - 用户输入内容显示在系统提示词下方
+     - 保持合适的间距和分隔
+  2. 样式区分：
+     - 系统提示词使用特殊的背景色（浅灰色）
+     - 添加左侧边框标记
+     - 使用不同的字体颜色（深灰色）
+  3. 交互限制：
+     - 系统提示词区域设置为只读
+     - 用户无法编辑或删除系统提示词
+     - 光标默认定位在用户输入区域
+
+#### 14.2 验收标准
+1. 显示效果：
+   - 系统提示词与用户输入有明显的视觉区分
+   - 样式美观，不影响阅读体验
+   - 保持与整体界面风格统一
+2. 功能限制：
+   - 系统提示词区域无法编辑
+   - 用户只能在提示词下方进行输入
+   - 复制粘贴等操作不影响系统提示词
+3. 交互体验：
+   - 编辑器打开时光标自动定位到用户输入区域
+   - 切换模板时系统提示词平滑更新
+   - 提示词区域可以滚动查看
+
+#### 14.3 实现方案
+```javascript
+/**
+ * 更新编辑器中的系统提示词
+ */
+function updateSystemPrompt() {
+    const promptTemplate = getSelectedTemplate();
+    const userContent = nlEditor.getValue().trim();
+    
+    // 设置系统提示词样式
+    const systemPromptLines = promptTemplate.split('\n');
+    systemPromptLines.forEach((line, index) => {
+        nlEditor.addLineClass(index, 'wrap', 'system-prompt-line');
+    });
+    
+    // 添加系统提示词标记
+    const promptMarker = document.createElement('div');
+    promptMarker.className = 'system-prompt-marker';
+    promptMarker.textContent = '系统提示词';
+    nlEditor.getWrapperElement().appendChild(promptMarker);
+    
+    // 设置只读区域
+    const doc = nlEditor.getDoc();
+    const lastPromptLine = systemPromptLines.length - 1;
+    doc.markText(
+        {line: 0, ch: 0},
+        {line: lastPromptLine, ch: systemPromptLines[lastPromptLine].length},
+        {readOnly: true, className: 'system-prompt-text'}
+    );
+    
+    // 将光标定位到用户输入区域
+    nlEditor.setCursor(lastPromptLine + 1, 0);
+}
+```
+
+```css
+/* 系统提示词样式 */
+.system-prompt-line {
+    background-color: #f5f5f5;
+    border-left: 3px solid #e0e0e0;
+    color: #666;
+    font-family: 'Courier New', monospace;
+}
+
+.system-prompt-text {
+    opacity: 0.8;
+}
+
+.system-prompt-marker {
+    position: absolute;
+    top: 0;
+    right: 10px;
+    background-color: #e0e0e0;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    color: #666;
+    z-index: 10;
+}
+
+/* 用户输入区域样式 */
+.CodeMirror-line:not(.system-prompt-line) {
+    background-color: #fff;
+    color: #333;
+}
+```
+
+#### 14.4 关键设计说明
+1. **样式设计**
+   - 使用浅灰色背景标识系统提示词
+   - 左侧边框提供视觉引导
+   - 字体颜色区分提示词和用户输入
+
+2. **交互控制**
+   - 使用 CodeMirror 的 markText 功能设置只读区域
+   - 自动定位光标到用户输入区域
+   - 添加系统提示词标记增强可识别性
+
+3. **性能优化**
+   - 使用类名控制样式，避免频繁的DOM操作
+   - 样式切换时使用CSS过渡效果
+   - 优化重绘和回流
+
+#### 14.5 注意事项
+1. 确保系统提示词样式在不同主题下都清晰可见
+2. 处理长文本提示词的换行和滚动
+3. 保持样式的浏览器兼容性
+4. 考虑高对比度主题下的可访问性
