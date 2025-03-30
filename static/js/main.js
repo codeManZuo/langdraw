@@ -219,40 +219,74 @@ document.addEventListener('DOMContentLoaded', function() {
         const promptTemplate = settings.promptTemplates[diagramType]?.[templateType];
         
         if (promptTemplate) {
-            // 获取用户当前输入的内容（如果有）
-            const userContent = nlEditor.getValue().trim();
-            const userLines = userContent.split('\n');
+            // 获取当前编辑器内容
+            const currentContent = nlEditor.getValue();
             
-            // 检查是否有空行
-            let hasEmptyLine = userLines.some(line => line.trim() === '');
+            // 分析当前内容
+            const lines = currentContent.split('\n');
+            let userContent = '';
+            let hasSystemPrompt = false;
             
-            // 先清除编辑器内容和所有样式
-            nlEditor.setValue('');
+            // 查找用户内容（在系统提示词之前的所有内容）
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                if (line.includes('请你基于以上信息')) {
+                    hasSystemPrompt = true;
+                    break;
+                }
+                if (userContent) {
+                    userContent += '\n';
+                }
+                userContent += line;
+            }
+            
+            // 构建新的内容，确保有两个空行
+            let newContent = '';
+            if (userContent.trim()) {
+                // 如果有用户内容，添加用户内容和两个空行
+                newContent = userContent.trim() + '\n\n\n' + promptTemplate;
+            } else {
+                // 如果没有用户内容，添加两个空行
+                newContent = '\n\n' + promptTemplate;
+            }
+            
+            // 保存当前光标位置
+            const currentCursor = nlEditor.getCursor();
+            
+            // 设置新内容
+            nlEditor.setValue(newContent);
+            
+            // 移除所有已有的样式
             const totalLines = nlEditor.lineCount();
             for (let i = 0; i < totalLines; i++) {
                 nlEditor.removeLineClass(i, 'wrap', 'system-prompt-line');
             }
             
-            // 设置新的内容
-            let content = '';
-            if (hasEmptyLine) {
-                // 如果有空行，保留一个空行
-                content = '\n\n' + promptTemplate;
+            // 为系统提示词部分添加样式
+            const contentLines = newContent.split('\n');
+            let promptStartIndex = -1;
+            
+            // 找到系统提示词开始的位置
+            for (let i = 0; i < contentLines.length; i++) {
+                if (contentLines[i].includes('请你基于以上信息')) {
+                    promptStartIndex = i;
+                    break;
+                }
+            }
+            
+            // 为所有系统提示词行添加样式
+            if (promptStartIndex !== -1) {
+                for (let i = promptStartIndex; i < contentLines.length; i++) {
+                    nlEditor.addLineClass(i, 'wrap', 'system-prompt-line');
+                }
+            }
+            
+            // 恢复光标位置，但确保不超过用户内容区域
+            if (userContent.trim()) {
+                nlEditor.setCursor(0, 0);
             } else {
-                content = promptTemplate;
+                nlEditor.setCursor(0, 0);
             }
-            nlEditor.setValue(content);
-            
-            // 为所有提示词行添加样式
-            const lines = content.split('\n');
-            for (let i = 0; i < lines.length; i++) {
-                // 如果是空行，跳过
-                if (lines[i].trim() === '') continue;
-                nlEditor.addLineClass(i, 'wrap', 'system-prompt-line');
-            }
-            
-            // 将光标移动到开头
-            nlEditor.setCursor(0, 0);
         }
     }
 
