@@ -508,59 +508,203 @@ const DiagramRenderers = {
         let scale = 0.8;
         const scaleStep = 0.1;
         
-        // 改进缩放包装器的样式以便更好地支持缩放
-        svgWrapper.style.overflow = 'auto';
+        // 设置外部容器为相对定位，使得内部绝对定位的元素能够参照它
+        container.style.position = 'relative';
+        
+        // 保存原始SVG包装器的内容，以便重构DOM
+        const svgWrapperContent = svgWrapper.innerHTML;
+        
+        // 清空SVG包装器并修改其样式
+        svgWrapper.innerHTML = '';
+        svgWrapper.style.position = 'relative';
         svgWrapper.style.width = '100%';
         svgWrapper.style.height = '100%';
-        svgWrapper.style.display = 'flex';
-        svgWrapper.style.justifyContent = 'center';
-        svgWrapper.style.alignItems = 'center';
+        svgWrapper.style.minHeight = '400px';
+        
+        // 创建滚动容器
+        const scrollContainer = document.createElement('div');
+        scrollContainer.className = 'scroll-container';
+        scrollContainer.style.width = '100%';
+        scrollContainer.style.height = '100%';
+        scrollContainer.style.minHeight = '400px';
+        scrollContainer.style.overflow = 'auto'; // 允许在两个方向上滚动
+        scrollContainer.style.position = 'absolute';
+        scrollContainer.style.top = '0';
+        scrollContainer.style.left = '0';
+        scrollContainer.style.right = '0';
+        scrollContainer.style.bottom = '0';
+        scrollContainer.style.backgroundColor = '#fff';
+        
+        // 创建一个缩放内容包装器
+        const zoomContentWrapper = document.createElement('div');
+        zoomContentWrapper.className = 'zoom-content-wrapper';
+        zoomContentWrapper.style.minWidth = '100%';
+        zoomContentWrapper.style.minHeight = '100%';
+        zoomContentWrapper.style.display = 'flex';
+        zoomContentWrapper.style.justifyContent = 'center';
+        zoomContentWrapper.style.alignItems = 'center';
+        zoomContentWrapper.style.position = 'relative';
         
         // 创建一个内部容器用于缩放
         const zoomContainer = document.createElement('div');
         zoomContainer.className = 'zoom-container';
         zoomContainer.style.transformOrigin = 'center center';
         zoomContainer.style.transition = 'transform 0.1s ease-out';
-        zoomContainer.style.width = '100%';
-        zoomContainer.style.height = '100%';
-        zoomContainer.style.display = 'flex';
-        zoomContainer.style.justifyContent = 'center';
-        zoomContainer.style.alignItems = 'center';
+        zoomContainer.style.position = 'relative';
+        zoomContainer.style.display = 'inline-block'; // 使容器宽度自适应内容
         
-        // 将SVG移动到缩放容器中
-        while (svgWrapper.firstChild) {
-            zoomContainer.appendChild(svgWrapper.firstChild);
+        // 设置原始内容
+        zoomContainer.innerHTML = svgWrapperContent;
+        
+        // 组装DOM结构
+        zoomContentWrapper.appendChild(zoomContainer);
+        scrollContainer.appendChild(zoomContentWrapper);
+        svgWrapper.appendChild(scrollContainer);
+        
+        // 获取SVG元素
+        const updatedSvg = zoomContainer.querySelector('svg');
+        if (updatedSvg) {
+            // 重新应用样式以确保SVG正确显示
+            updatedSvg.style.maxWidth = 'none'; // 移除最大宽度限制
+            updatedSvg.style.width = updatedSvg.getAttribute('width') || 'auto';
+            updatedSvg.style.height = updatedSvg.getAttribute('height') || 'auto';
         }
-        svgWrapper.appendChild(zoomContainer);
         
         // 更新缩放
         function updateZoom() {
+            // 应用缩放
             zoomContainer.style.transform = `scale(${scale})`;
+            
+            // 获取SVG的实际尺寸
+            const svgWidth = updatedSvg ? updatedSvg.getBoundingClientRect().width * scale : zoomContainer.offsetWidth * scale;
+            const svgHeight = updatedSvg ? updatedSvg.getBoundingClientRect().height * scale : zoomContainer.offsetHeight * scale;
+            
+            // 计算并应用新的内边距，确保缩放后内容仍然居中
+            const paddingHorizontal = Math.max(0, (scrollContainer.clientWidth - svgWidth) / 2);
+            const paddingVertical = Math.max(0, (scrollContainer.clientHeight - svgHeight) / 2);
+            
+            // 更新内边距
+            zoomContentWrapper.style.padding = 
+                `${paddingVertical}px ${paddingHorizontal}px ${paddingVertical}px ${paddingHorizontal}px`;
+            
+            // 更新zoomContentWrapper尺寸以适应缩放内容
+            zoomContentWrapper.style.width = `${Math.max(scrollContainer.clientWidth, svgWidth)}px`;
+            zoomContentWrapper.style.height = `${Math.max(scrollContainer.clientHeight, svgHeight)}px`;
         }
         
-        // 初始应用缩放
-        updateZoom();
+        // 确保SVG尺寸正确
+        if (updatedSvg) {
+            // 如果SVG没有设置宽高，给它设置合适的尺寸
+            if (!updatedSvg.getAttribute('width') || !updatedSvg.getAttribute('height')) {
+                updatedSvg.setAttribute('width', '100%');
+                updatedSvg.setAttribute('height', 'auto');
+            }
+        }
+        
+        // 在元素加载后应用初始缩放
+        setTimeout(() => {
+            updateZoom();
+            
+            // 滚动到中心位置
+            scrollContainer.scrollLeft = (zoomContentWrapper.scrollWidth - scrollContainer.clientWidth) / 2;
+            scrollContainer.scrollTop = (zoomContentWrapper.scrollHeight - scrollContainer.clientHeight) / 2;
+        }, 50);
+        
+        // 添加窗口大小变化监听器，重新调整内容位置
+        window.addEventListener('resize', function() {
+            updateZoom();
+        });
         
         // 事件监听器
         zoomInBtn.addEventListener('click', function() {
+            // 获取当前滚动位置和中心点
+            const scrollCenterX = scrollContainer.scrollLeft + scrollContainer.clientWidth / 2;
+            const scrollCenterY = scrollContainer.scrollTop + scrollContainer.clientHeight / 2;
+            
+            // 计算当前中心点在内容中的比例位置
+            const contentWidth = zoomContentWrapper.scrollWidth;
+            const contentHeight = zoomContentWrapper.scrollHeight;
+            const centerRatioX = scrollCenterX / contentWidth;
+            const centerRatioY = scrollCenterY / contentHeight;
+            
+            // 增加缩放值
             scale += scaleStep;
             updateZoom();
+            
+            // 等待DOM更新
+            setTimeout(() => {
+                // 计算新的内容尺寸和滚动位置
+                const newContentWidth = zoomContentWrapper.scrollWidth;
+                const newContentHeight = zoomContentWrapper.scrollHeight;
+                const newScrollLeft = (newContentWidth * centerRatioX) - (scrollContainer.clientWidth / 2);
+                const newScrollTop = (newContentHeight * centerRatioY) - (scrollContainer.clientHeight / 2);
+                
+                // 应用新滚动位置
+                scrollContainer.scrollLeft = newScrollLeft;
+                scrollContainer.scrollTop = newScrollTop;
+            }, 10);
         });
         
         zoomOutBtn.addEventListener('click', function() {
+            // 记录缩小前的中心点位置比例
+            const scrollCenterX = scrollContainer.scrollLeft + scrollContainer.clientWidth / 2;
+            const scrollCenterY = scrollContainer.scrollTop + scrollContainer.clientHeight / 2;
+            const contentWidth = zoomContentWrapper.scrollWidth;
+            const contentHeight = zoomContentWrapper.scrollHeight;
+            const centerRatioX = scrollCenterX / contentWidth;
+            const centerRatioY = scrollCenterY / contentHeight;
+            
+            // 缩小
             scale = Math.max(0.1, scale - scaleStep);
             updateZoom();
+            
+            // 等待DOM更新
+            setTimeout(() => {
+                // 计算新的滚动位置
+                const newContentWidth = zoomContentWrapper.scrollWidth;
+                const newContentHeight = zoomContentWrapper.scrollHeight;
+                const newScrollLeft = (newContentWidth * centerRatioX) - (scrollContainer.clientWidth / 2);
+                const newScrollTop = (newContentHeight * centerRatioY) - (scrollContainer.clientHeight / 2);
+                
+                // 应用新滚动位置
+                scrollContainer.scrollLeft = newScrollLeft;
+                scrollContainer.scrollTop = newScrollTop;
+            }, 10);
         });
         
         resetBtn.addEventListener('click', function() {
+            // 重置缩放
             scale = 0.8;
             updateZoom();
+            
+            // 等待DOM更新后滚动到中心
+            setTimeout(() => {
+                scrollContainer.scrollLeft = (zoomContentWrapper.scrollWidth - scrollContainer.clientWidth) / 2;
+                scrollContainer.scrollTop = (zoomContentWrapper.scrollHeight - scrollContainer.clientHeight) / 2;
+            }, 10);
         });
         
         // 添加鼠标滚轮缩放支持
-        svgWrapper.addEventListener('wheel', function(e) {
+        scrollContainer.addEventListener('wheel', function(e) {
             if (e.ctrlKey || e.metaKey) {
                 e.preventDefault();
+                
+                // 获取鼠标位置作为缩放中心点
+                const rect = scrollContainer.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                // 计算鼠标指针在内容中的位置比例
+                const scrollX = scrollContainer.scrollLeft;
+                const scrollY = scrollContainer.scrollTop;
+                const pointX = scrollX + mouseX;
+                const pointY = scrollY + mouseY;
+                const contentWidth = zoomContentWrapper.scrollWidth;
+                const contentHeight = zoomContentWrapper.scrollHeight;
+                const ratioX = pointX / contentWidth;
+                const ratioY = pointY / contentHeight;
+                
+                // 更新缩放值
                 if (e.deltaY < 0) {
                     // 向上滚动，放大
                     scale = Math.min(5, scale + scaleStep);
@@ -568,7 +712,21 @@ const DiagramRenderers = {
                     // 向下滚动，缩小
                     scale = Math.max(0.1, scale - scaleStep);
                 }
+                
                 updateZoom();
+                
+                // 等待DOM更新
+                setTimeout(() => {
+                    // 计算缩放后的新位置
+                    const newContentWidth = zoomContentWrapper.scrollWidth;
+                    const newContentHeight = zoomContentWrapper.scrollHeight;
+                    const newPointX = newContentWidth * ratioX;
+                    const newPointY = newContentHeight * ratioY;
+                    
+                    // 调整滚动位置，使鼠标位置保持在同一内容点上
+                    scrollContainer.scrollLeft = newPointX - mouseX;
+                    scrollContainer.scrollTop = newPointY - mouseY;
+                }, 10);
             }
         }, { passive: false });
     },
