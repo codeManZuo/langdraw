@@ -3,7 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LangDraw</title>
+    <title>LangDraw - 在线智能绘图工具</title>
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="LangDraw是一款智能在线绘图工具，支持自然语言生成流程图、时序图等。集成了Mermaid和PlantUML等主流图表库，让绘图更简单。">
+    <meta name="keywords" content="LangDraw,在线绘图,流程图,时序图,Mermaid,PlantUML,智能绘图,自然语言绘图">
+    <meta name="author" content="codeManZuo">
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="LangDraw - 在线智能绘图工具">
+    <meta property="og:description" content="使用自然语言创建专业的流程图、时序图等，支持Mermaid和PlantUML语法。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://github.com/codeManZuo/langdraw">
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="LangDraw - 在线智能绘图工具">
+    <meta name="twitter:description" content="使用自然语言创建专业的流程图、时序图等，支持Mermaid和PlantUML语法。">
     <!-- 添加favicon -->
     <link rel="icon" href="favicon/favicon.svg" type="image/svg+xml">
     <link rel="icon" href="favicon/favicon.ico" type="image/x-icon">
@@ -36,6 +49,9 @@
         <header class="toolbar">
             <div class="logo">
                 <span class="logo-lang">Lang</span><span class="logo-draw">Draw</span>
+                <a href="https://github.com/codeManZuo/langdraw" target="_blank" class="github-icon" title="View on GitHub">
+                    <i class="fab fa-github"></i>
+                </a>
             </div>
             <div class="tools">
                 <div class="diagram-type">
@@ -146,6 +162,7 @@
     <script src="js/config.js"></script>
     <script src="js/templates.js"></script>
     <script src="js/renderers.js"></script>
+    <script src="js/drag-handler.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html> 

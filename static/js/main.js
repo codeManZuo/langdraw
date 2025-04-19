@@ -91,6 +91,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // 初始化拖拽分隔条
     initResizer();
 
+    // 初始化预览区域的拖拽功能
+    const previewContainer = document.getElementById('preview-container');
+    const dragHandler = new DragHandler(previewContainer);
+
+    // 在页面卸载时清理事件监听器
+    window.addEventListener('unload', () => {
+        dragHandler.destroy();
+    });
+
     /**
      * 初始化编辑器
      */
